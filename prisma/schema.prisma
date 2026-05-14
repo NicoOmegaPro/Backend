@@ -1,0 +1,157 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Rol {
+  id          Int       @id @default(autoincrement())
+  nombre      String    @unique // Ej: ADMINISTRADOR, JEFE_PROYECTO, SUPERVISOR, TRABAJADOR
+  descripcion String?
+  usuarios    Usuario[]
+}
+
+model Usuario {
+  id                  Int                  @id @default(autoincrement())
+  nombre              String
+  email               String               @unique
+  password            String
+  descripcion         String?
+  imagenPerfil        String?              // Ruta local
+  rolId               Int
+  rol                 Rol                  @relation(fields: [rolId], references: [id])
+  equipos             EquipoUsuario[]
+  tareasAsignadas     Tarea[]              @relation("AsignadoA")
+  comentarios         Comentario[]
+  adjuntos            Adjunto[]
+  notificaciones      Notificacion[]
+  historialActividad  HistorialActividad[]
+  proyectosLiderados  Proyecto[]           @relation("LiderProyecto")
+}
+
+model Equipo {
+  id          Int             @id @default(autoincrement())
+  nombre      String
+  descripcion String?
+  usuarios    EquipoUsuario[]
+  proyectos   Proyecto[]
+}
+
+model EquipoUsuario {
+  usuarioId Int
+  equipoId  Int
+  usuario   Usuario @relation(fields: [usuarioId], references: [id])
+  equipo    Equipo  @relation(fields: [equipoId], references: [id])
+
+  @@id([usuarioId, equipoId])
+}
+
+model Proyecto {
+  id          Int       @id @default(autoincrement())
+  nombre      String
+  descripcion String?
+  estado      String    @default("ACTIVO") // ACTIVO, COMPLETADO, ARCHIVADO
+  equipoId    Int?
+  equipo      Equipo?   @relation(fields: [equipoId], references: [id])
+  liderId     Int?
+  lider       Usuario?  @relation("LiderProyecto", fields: [liderId], references: [id])
+  tareas      Tarea[]
+  sprints     Sprint[]
+}
+
+model Sprint {
+  id          Int       @id @default(autoincrement())
+  nombre      String
+  fechaInicio DateTime
+  fechaFin    DateTime
+  proyectoId  Int
+  proyecto    Proyecto  @relation(fields: [proyectoId], references: [id])
+  tareas      Tarea[]
+}
+
+model Tarea {
+  id          Int          @id @default(autoincrement())
+  titulo      String
+  descripcion String?
+  estado      String       @default("PENDIENTE") // PENDIENTE, EN_PROGRESO, EN_REVISION, FINALIZADO
+  prioridad   String       @default("MEDIA")     // BAJA, MEDIA, ALTA, URGENTE
+  proyectoId  Int
+  proyecto    Proyecto     @relation(fields: [proyectoId], references: [id])
+  sprintId    Int?
+  sprint      Sprint?      @relation(fields: [sprintId], references: [id])
+  asignadoAId Int?
+  asignadoA   Usuario?     @relation("AsignadoA", fields: [asignadoAId], references: [id])
+  subtareas   Subtarea[]
+  comentarios Comentario[]
+  adjuntos    Adjunto[]
+  etiquetas   TareaEtiqueta[]
+}
+
+model Subtarea {
+  id          Int     @id @default(autoincrement())
+  titulo      String
+  completada  Boolean @default(false)
+  tareaId     Int
+  tarea       Tarea   @relation(fields: [tareaId], references: [id])
+}
+
+model Comentario {
+  id        Int      @id @default(autoincrement())
+  contenido String
+  fecha     DateTime @default(now())
+  tareaId   Int
+  tarea     Tarea    @relation(fields: [tareaId], references: [id])
+  autorId   Int
+  autor     Usuario  @relation(fields: [autorId], references: [id])
+}
+
+model Adjunto {
+  id        Int      @id @default(autoincrement())
+  rutaLocal String   // Ruta donde se almacena el archivo en el servidor
+  nombre    String
+  fecha     DateTime @default(now())
+  tareaId   Int
+  tarea     Tarea    @relation(fields: [tareaId], references: [id])
+  subidoPor Int
+  usuario   Usuario  @relation(fields: [subidoPor], references: [id])
+}
+
+model Etiqueta {
+  id     Int             @id @default(autoincrement())
+  nombre String
+  color  String
+  tareas TareaEtiqueta[]
+}
+
+model TareaEtiqueta {
+  tareaId    Int
+  etiquetaId Int
+  tarea      Tarea    @relation(fields: [tareaId], references: [id])
+  etiqueta   Etiqueta @relation(fields: [etiquetaId], references: [id])
+
+  @@id([tareaId, etiquetaId])
+}
+
+model Notificacion {
+  id        Int      @id @default(autoincrement())
+  mensaje   String
+  tipo      String   // EJ: NUEVA_TAREA, CAMBIO_ESTADO
+  leida     Boolean  @default(false)
+  fecha     DateTime @default(now())
+  usuarioId Int
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id])
+}
+
+model HistorialActividad {
+  id          Int      @id @default(autoincrement())
+  entidadTipo String   // EJ: TAREA, PROYECTO
+  entidadId   Int
+  accion      String   // EJ: CREADO, ACTUALIZADO, ELIMINADO
+  detalles    String?
+  fecha       DateTime @default(now())
+  usuarioId   Int
+  usuario     Usuario  @relation(fields: [usuarioId], references: [id])
+}
