@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/admin.css">
+</head>
+
+<body>
+    <div class="layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>KanbanAdmin</h2>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="#users" class="nav-link active" data-title="Gestión de Usuarios">Usuarios</a>
+                <a href="#roles" class="nav-link" data-title="Gestión de Roles">Roles</a>
+                <a href="#tasks" class="nav-link" data-title="Gestión de Tareas">Tareas</a>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="topbar">
+                <h1 id="page-title">Gestión de Usuarios</h1>
+            </header>
+            <div id="app-container" class="app-container">
+                <!-- Vistas cargadas dinámicamente -->
+            </div>
+        </main>
+    </div>
+
+    <!-- Global Modal Overlay -->
+    <div id="modal-overlay" class="modal-overlay">
+        <div class="modal-content" id="modal-content">
+            <!-- Modal dinámico -->
+        </div>
+    </div>
+
+    <script src="/js/app.js"></script>
+</body>
+
+</html>

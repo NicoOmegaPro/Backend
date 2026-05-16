@@ -7,18 +7,23 @@ const authRoutes = require('./routes/auth.routes');
 const usersRoutes = require('./routes/users.routes');
 const projectsRoutes = require('./routes/projects.routes');
 const tasksRoutes = require('./routes/tasks.routes');
+const rolesRoutes = require('./routes/roles.routes');
 
 const app = express();
+
+const path = require('path');
 
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use(express.static(path.join(__dirname, '../public')));
 
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/projects', projectsRoutes);
 app.use('/api/tasks', tasksRoutes);
+app.use('/api/roles', rolesRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

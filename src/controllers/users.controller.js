@@ -43,7 +43,7 @@ const updateUser = async (req, res) => {
   try {
     const { id } = req.params;
     const data = req.body;
-    
+
     // Evitar que actualicen la contraseña por este endpoint directamente
     delete data.password;
 
@@ -51,7 +51,7 @@ const updateUser = async (req, res) => {
       where: { id: parseInt(id) },
       data
     });
-    
+
     res.json({ message: 'Usuario actualizado', user });
   } catch (error) {
     console.error(error);
