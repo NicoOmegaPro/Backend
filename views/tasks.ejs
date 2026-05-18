@@ -1,0 +1,38 @@
+<%- include('_header') %>
+<div class="ph">
+  <span class="ph-t">Tareas</span>
+  <a href="/admin/tasks/create" class="btn btn-p"><i class="bi bi-plus-lg"></i>Nueva tarea</a>
+</div>
+<div class="dc">
+  <div class="tw">
+    <table class="dt">
+      <thead>
+        <tr><th>ID</th><th>Título</th><th>Estado</th><th>Prioridad</th><th>Proyecto</th><th>Asignado a</th><th></th></tr>
+      </thead>
+      <tbody>
+        <%
+          const estadoCls = { PENDIENTE:'tg-slate', EN_PROGRESO:'tg-blue', EN_REVISION:'tg-yellow', FINALIZADO:'tg-green' };
+          const prioCls   = { BAJA:'tg-teal', MEDIA:'tg-sky', ALTA:'tg-orange', URGENTE:'tg-red' };
+        %>
+        <% tasks.forEach(t => { %>
+        <tr>
+          <td class="ci"><%= t.id %></td>
+          <td><strong><%= t.titulo %></strong></td>
+          <td><span class="tg <%= estadoCls[t.estado] || 'tg-slate' %>"><%= t.estado %></span></td>
+          <td><span class="tg <%= prioCls[t.prioridad] || 'tg-slate' %>"><%= t.prioridad %></span></td>
+          <td class="cm"><%= t.proyecto?.nombre || '-' %></td>
+          <td class="cm"><%= t.asignadoA?.nombre || '-' %></td>
+          <td class="ca">
+            <a href="/admin/tasks/<%= t.id %>/edit" class="ib ib-e"><i class="bi bi-pencil"></i></a>
+            <form action="/admin/tasks/<%= t.id %>/delete" method="POST" style="display:inline" onsubmit="return confirm('¿Eliminar tarea?')">
+              <button class="ib ib-d"><i class="bi bi-trash"></i></button>
+            </form>
+          </td>
+        </tr>
+        <% }) %>
+        <% if (!tasks.length) { %><tr class="erow"><td colspan="7">Sin registros</td></tr><% } %>
+      </tbody>
+    </table>
+  </div>
+</div>
+<%- include('_footer') %>

@@ -1,0 +1,31 @@
+<%- include('_header') %>
+<div class="ph">
+  <span class="ph-t">Comentarios</span>
+</div>
+<div class="dc">
+  <div class="tw">
+    <table class="dt">
+      <thead>
+        <tr><th>ID</th><th>Contenido</th><th>Tarea</th><th>Autor</th><th>Fecha</th><th></th></tr>
+      </thead>
+      <tbody>
+        <% comentarios.forEach(c => { %>
+        <tr>
+          <td class="ci"><%= c.id %></td>
+          <td class="cm"><%= c.contenido.length > 60 ? c.contenido.substring(0,60)+'…' : c.contenido %></td>
+          <td class="cm"><%= c.tarea?.titulo || '-' %></td>
+          <td class="cm"><%= c.autor?.nombre || '-' %></td>
+          <td class="cm"><%= fmt(c.fecha) %></td>
+          <td class="ca">
+            <form action="/admin/comentarios/<%= c.id %>/delete" method="POST" style="display:inline" onsubmit="return confirm('¿Eliminar comentario?')">
+              <button class="ib ib-d"><i class="bi bi-trash"></i></button>
+            </form>
+          </td>
+        </tr>
+        <% }) %>
+        <% if (!comentarios.length) { %><tr class="erow"><td colspan="6">Sin registros</td></tr><% } %>
+      </tbody>
+    </table>
+  </div>
+</div>
+<%- include('_footer') %>

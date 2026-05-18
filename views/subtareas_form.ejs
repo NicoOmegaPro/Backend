@@ -1,0 +1,30 @@
+<%- include('_header') %>
+<div class="ph">
+  <span class="ph-t"><%= title %></span>
+  <a href="/admin/subtareas" class="btn btn-g"><i class="bi bi-arrow-left"></i>Volver</a>
+</div>
+<div class="fc">
+  <form action="<%= subtarea ? '/admin/subtareas/' + subtarea.id : '/admin/subtareas' %>" method="POST">
+    <div class="f">
+      <label>Título</label>
+      <input type="text" name="titulo" value="<%= subtarea ? subtarea.titulo : '' %>" required>
+    </div>
+    <div class="f">
+      <label>Tarea</label>
+      <select name="tareaId" required>
+        <option value="">-- Selecciona una tarea --</option>
+        <% tasks.forEach(t => { %>
+        <option value="<%= t.id %>" <%= subtarea && subtarea.tareaId === t.id ? 'selected' : '' %>><%= t.titulo %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="f-check">
+      <input type="checkbox" name="completada" id="completada" <%= subtarea && subtarea.completada ? 'checked' : '' %>>
+      <label for="completada">Marcar como completada</label>
+    </div>
+    <div class="fa">
+      <button type="submit" class="btn btn-p"><i class="bi bi-floppy"></i>Guardar</button>
+    </div>
+  </form>
+</div>
+<%- include('_footer') %>

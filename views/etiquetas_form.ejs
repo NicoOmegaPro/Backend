@@ -1,0 +1,21 @@
+<%- include('_header') %>
+<div class="ph">
+  <span class="ph-t"><%= title %></span>
+  <a href="/admin/etiquetas" class="btn btn-g"><i class="bi bi-arrow-left"></i>Volver</a>
+</div>
+<div class="fc">
+  <form action="<%= etiqueta ? '/admin/etiquetas/' + etiqueta.id : '/admin/etiquetas' %>" method="POST">
+    <div class="f">
+      <label>Nombre</label>
+      <input type="text" name="nombre" value="<%= etiqueta ? etiqueta.nombre : '' %>" required>
+    </div>
+    <div class="f">
+      <label>Color</label>
+      <input type="color" name="color" value="<%= etiqueta ? etiqueta.color : '#4f6ef7' %>" required>
+    </div>
+    <div class="fa">
+      <button type="submit" class="btn btn-p"><i class="bi bi-floppy"></i>Guardar</button>
+    </div>
+  </form>
+</div>
+<%- include('_footer') %>

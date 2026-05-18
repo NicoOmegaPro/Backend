@@ -1,0 +1,32 @@
+<%- include('_header') %>
+<div class="ph">
+  <span class="ph-t">Roles</span>
+  <a href="/admin/roles/create" class="btn btn-p"><i class="bi bi-plus-lg"></i>Nuevo rol</a>
+</div>
+<div class="dc">
+  <div class="tw">
+    <table class="dt">
+      <thead>
+        <tr><th>ID</th><th>Nombre</th><th>Descripción</th><th>Usuarios</th><th></th></tr>
+      </thead>
+      <tbody>
+        <% roles.forEach(r => { %>
+        <tr>
+          <td class="ci"><%= r.id %></td>
+          <td><strong><%= r.nombre %></strong></td>
+          <td class="cm"><%= r.descripcion || '-' %></td>
+          <td><span class="tg tg-blue"><%= r._count.usuarios %></span></td>
+          <td class="ca">
+            <a href="/admin/roles/<%= r.id %>/edit" class="ib ib-e"><i class="bi bi-pencil"></i></a>
+            <form action="/admin/roles/<%= r.id %>/delete" method="POST" style="display:inline" onsubmit="return confirm('¿Eliminar rol?')">
+              <button class="ib ib-d"><i class="bi bi-trash"></i></button>
+            </form>
+          </td>
+        </tr>
+        <% }) %>
+        <% if (!roles.length) { %><tr class="erow"><td colspan="5">Sin registros</td></tr><% } %>
+      </tbody>
+    </table>
+  </div>
+</div>
+<%- include('_footer') %>

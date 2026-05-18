@@ -1,0 +1,21 @@
+<%- include('_header') %>
+<div class="ph">
+  <span class="ph-t"><%= title %></span>
+  <a href="/admin/equipos" class="btn btn-g"><i class="bi bi-arrow-left"></i>Volver</a>
+</div>
+<div class="fc">
+  <form action="<%= equipo ? '/admin/equipos/' + equipo.id : '/admin/equipos' %>" method="POST">
+    <div class="f">
+      <label>Nombre</label>
+      <input type="text" name="nombre" value="<%= equipo ? equipo.nombre : '' %>" required>
+    </div>
+    <div class="f">
+      <label>Descripción</label>
+      <textarea name="descripcion" rows="2"><%= equipo ? (equipo.descripcion || '') : '' %></textarea>
+    </div>
+    <div class="fa">
+      <button type="submit" class="btn btn-p"><i class="bi bi-floppy"></i>Guardar</button>
+    </div>
+  </form>
+</div>
+<%- include('_footer') %>

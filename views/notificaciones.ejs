@@ -1,0 +1,32 @@
+<%- include('_header') %>
+<div class="ph">
+  <span class="ph-t">Notificaciones</span>
+</div>
+<div class="dc">
+  <div class="tw">
+    <table class="dt">
+      <thead>
+        <tr><th>ID</th><th>Mensaje</th><th>Tipo</th><th>Usuario</th><th>Leída</th><th>Fecha</th><th></th></tr>
+      </thead>
+      <tbody>
+        <% notificaciones.forEach(n => { %>
+        <tr>
+          <td class="ci"><%= n.id %></td>
+          <td class="cm"><%= n.mensaje.length > 55 ? n.mensaje.substring(0,55)+'…' : n.mensaje %></td>
+          <td><span class="tg tg-sky"><%= n.tipo %></span></td>
+          <td class="cm"><%= n.usuario?.nombre || '-' %></td>
+          <td><span class="tg <%= n.leida ? 'tg-green' : 'tg-slate' %>"><%= n.leida ? 'Leída' : 'No leída' %></span></td>
+          <td class="cm"><%= fmt(n.fecha) %></td>
+          <td class="ca">
+            <form action="/admin/notificaciones/<%= n.id %>/delete" method="POST" style="display:inline" onsubmit="return confirm('¿Eliminar notificación?')">
+              <button class="ib ib-d"><i class="bi bi-trash"></i></button>
+            </form>
+          </td>
+        </tr>
+        <% }) %>
+        <% if (!notificaciones.length) { %><tr class="erow"><td colspan="7">Sin registros</td></tr><% } %>
+      </tbody>
+    </table>
+  </div>
+</div>
+<%- include('_footer') %>

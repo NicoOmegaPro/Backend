@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %> — KanbanAdmin</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #f0f2f5;
+      --white:    #ffffff;
+      --border:   #cbd5e1;
+      --text:     #0f172a;
+      --muted:    #475569;
+      --accent:   #4f6ef7;
+      --accent-d: #3b56e4;
+      --sb-bg:    #0f172a;
+      --sb-txt:   #94a3b8;
+      --sb-w:     210px;
+      --tb-h:     52px;
+      --r:        8px;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 13.5px;
+      line-height: 1.55;
+    }
+
+    /* ─── LAYOUT ─── */
+    .shell { display: flex; height: 100vh; overflow: hidden; }
+
+    /* ─── SIDEBAR ─── */
+    .sb {
+      width: var(--sb-w);
+      background: var(--sb-bg);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      overflow-y: auto;
+      scrollbar-width: none;
+    }
+    .sb::-webkit-scrollbar { display: none; }
+
+    .sb-brand {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 18px 14px;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 700;
+      border-bottom: 1px solid rgba(255,255,255,.06);
+    }
+    .sb-brand i { font-size: 18px; color: var(--accent); }
+
+    .sb-sec { padding: 12px 0 2px; }
+
+    .sb-lbl {
+      font-size: 9.5px;
+      font-weight: 600;
+      color: #4b5563;
+      letter-spacing: .9px;
+      text-transform: uppercase;
+      padding: 0 14px 5px;
+    }
+
+    .sb-a {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 7px 14px;
+      color: var(--sb-txt);
+      font-size: 12.5px;
+      text-decoration: none;
+      border-left: 2px solid transparent;
+      transition: color .1s, background .1s, border-color .1s;
+    }
+    .sb-a i { font-size: 13px; width: 14px; flex-shrink: 0; text-align: center; }
+    .sb-a:hover { color: #e2e8f0; background: rgba(255,255,255,.04); }
+    .sb-a.on {
+      color: #fff;
+      background: rgba(79,110,247,.18);
+      border-left-color: var(--accent);
+    }
+
+    /* ─── MAIN ─── */
+    .mn { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+
+    /* ─── TOPBAR ─── */
+    .tb {
+      height: var(--tb-h);
+      background: var(--white);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 22px;
+      flex-shrink: 0;
+    }
+    .tb-title { font-size: 14px; font-weight: 600; color: var(--text); }
+    .tb-badge {
+      margin-left: auto;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 9px;
+      border-radius: 20px;
+      background: #f0fdf4;
+      color: #16a34a;
+      font-size: 11px;
+      font-weight: 500;
+    }
+    .tb-badge i { font-size: 7px; }
+
+    /* ─── PAGE BODY ─── */
+    .pg { flex: 1; overflow-y: auto; padding: 20px 22px; }
+
+    /* ─── PAGE HEADER ─── */
+    .ph { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+    .ph-t { font-size: 13.5px; font-weight: 600; }
+
+    /* ─── BUTTONS ─── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 6px 13px;
+      font-size: 12.5px;
+      font-weight: 500;
+      border-radius: 6px;
+      border: 1px solid transparent;
+      cursor: pointer;
+      text-decoration: none;
+      line-height: 1;
+      font-family: inherit;
+      transition: background .1s, border-color .1s, color .1s;
+      white-space: nowrap;
+    }
+    .btn i { font-size: 12.5px; }
+    .btn-p { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .btn-p:hover { background: var(--accent-d); border-color: var(--accent-d); color: #fff; }
+    .btn-g { background: var(--white); color: #4b5563; border-color: var(--border); }
+    .btn-g:hover { background: var(--bg); color: var(--text); }
+
+    /* ─── ICON BUTTONS ─── */
+    .ib {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 5px;
+      border: 1px solid;
+      cursor: pointer;
+      text-decoration: none;
+      font-size: 12px;
+      transition: background .1s;
+      padding: 0;
+      background: none;
+    }
+    .ib-e { background: #eff6ff; color: #2563eb; border-color: #bfdbfe; }
+    .ib-e:hover { background: #dbeafe; }
+    .ib-d { background: #fef2f2; color: #dc2626; border-color: #fecaca; }
+    .ib-d:hover { background: #fee2e2; }
+
+    /* ─── DATA CARD ─── */
+    .dc { background: var(--white); border: 1px solid var(--border); border-radius: var(--r); overflow: hidden; }
+    .tw { overflow-x: auto; }
+
+    /* ─── TABLE ─── */
+    .dt { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .dt thead th {
+      background: #f8fafc;
+      color: #64748b;
+      font-size: 10.5px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      padding: 9px 13px;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+      text-align: center;
+    }
+    .dt thead th:nth-child(2) { text-align: left; }
+    .dt tbody td { padding: 9px 13px; border-bottom: 1px solid #e8edf3; vertical-align: middle; }
+    .dt tbody tr:last-child td { border-bottom: none; }
+    .dt tbody tr:hover td { background: #fafbff; }
+    .dt tbody td:has(.tg) { text-align: center; }
+    .ci { font-family: 'Courier New', monospace; font-size: 12.5px; color: #64748b; text-align: center; }
+    .cm { font-size: 12.5px; color: var(--muted); }
+    .cd { font-size: 12.5px; color: var(--muted); text-align: center; }
+    .ca { text-align: right !important; white-space: nowrap; }
+    .ca > * + * { margin-left: 3px; }
+    .erow td { text-align: center; color: var(--muted); padding: 36px 0; font-size: 13px; }
+
+    /* ─── TAGS ─── */
+    .tg { display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 11.5px; font-weight: 500; white-space: nowrap; }
+    .tg-blue   { background: #eff6ff; color: #1d4ed8; }
+    .tg-green  { background: #f0fdf4; color: #15803d; }
+    .tg-red    { background: #fef2f2; color: #b91c1c; }
+    .tg-yellow { background: #fefce8; color: #854d0e; }
+    .tg-orange { background: #fff7ed; color: #c2410c; }
+    .tg-purple { background: #faf5ff; color: #7c3aed; }
+    .tg-slate  { background: #f1f5f9; color: #475569; }
+    .tg-teal   { background: #f0fdfa; color: #0f766e; }
+    .tg-sky    { background: #f0f9ff; color: #0369a1; }
+
+    /* ─── FORM ─── */
+    .fc { background: var(--white); border: 1px solid var(--border); border-radius: var(--r); padding: 22px; max-width: 480px; }
+    .f { margin-bottom: 14px; }
+    .f > label {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      color: #64748b;
+      margin-bottom: 5px;
+      text-transform: uppercase;
+      letter-spacing: .4px;
+    }
+    .f input:not([type=checkbox]):not([type=color]),
+    .f select,
+    .f textarea {
+      width: 100%;
+      padding: 7px 10px;
+      font-size: 13px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      color: var(--text);
+      background: var(--white);
+      outline: none;
+      font-family: inherit;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .f input:not([type=checkbox]):not([type=color]):focus,
+    .f select:focus,
+    .f textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(79,110,247,.1);
+    }
+    .f input[type=color] {
+      padding: 2px 4px;
+      height: 36px;
+      width: 60px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .f-row { display: flex; gap: 12px; }
+    .f-row .f { flex: 1; }
+    .f-check { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
+    .f-check input[type=checkbox] { width: 15px; height: 15px; cursor: pointer; accent-color: var(--accent); }
+    .f-check label { font-size: 13px; font-weight: 500; cursor: pointer; color: var(--text); }
+    .fa { display: flex; gap: 8px; margin-top: 18px; }
+  </style>
+</head>
+<body>
+<div class="shell">
+  <aside class="sb">
+    <div class="sb-brand"><i class="bi bi-kanban-fill"></i>KanbanAdmin</div>
+    <nav>
+      <div class="sb-sec">
+        <div class="sb-lbl">Gestión</div>
+        <a href="/admin/users" class="sb-a <%= active==='users' ? 'on':'' %>"><i class="bi bi-people"></i>Usuarios</a>
+        <a href="/admin/roles" class="sb-a <%= active==='roles' ? 'on':'' %>"><i class="bi bi-shield-check"></i>Roles</a>
+      </div>
+      <div class="sb-sec">
+        <div class="sb-lbl">Trabajo</div>
+        <a href="/admin/projects"  class="sb-a <%= active==='projects'  ? 'on':'' %>"><i class="bi bi-folder2"></i>Proyectos</a>
+        <a href="/admin/equipos"   class="sb-a <%= active==='equipos'   ? 'on':'' %>"><i class="bi bi-diagram-3"></i>Equipos</a>
+        <a href="/admin/sprints"   class="sb-a <%= active==='sprints'   ? 'on':'' %>"><i class="bi bi-lightning-charge"></i>Sprints</a>
+        <a href="/admin/tasks"     class="sb-a <%= active==='tasks'     ? 'on':'' %>"><i class="bi bi-check2-square"></i>Tareas</a>
+        <a href="/admin/subtareas" class="sb-a <%= active==='subtareas' ? 'on':'' %>"><i class="bi bi-list-task"></i>Subtareas</a>
+      </div>
+      <div class="sb-sec">
+        <div class="sb-lbl">Contenido</div>
+        <a href="/admin/etiquetas"   class="sb-a <%= active==='etiquetas'   ? 'on':'' %>"><i class="bi bi-tag"></i>Etiquetas</a>
+        <a href="/admin/comentarios" class="sb-a <%= active==='comentarios' ? 'on':'' %>"><i class="bi bi-chat-left-text"></i>Comentarios</a>
+        <a href="/admin/adjuntos"    class="sb-a <%= active==='adjuntos'    ? 'on':'' %>"><i class="bi bi-paperclip"></i>Adjuntos</a>
+      </div>
+      <div class="sb-sec">
+        <div class="sb-lbl">Sistema</div>
+        <a href="/admin/notificaciones" class="sb-a <%= active==='notificaciones' ? 'on':'' %>"><i class="bi bi-bell"></i>Notificaciones</a>
+        <a href="/admin/historial"      class="sb-a <%= active==='historial'      ? 'on':'' %>"><i class="bi bi-clock-history"></i>Historial</a>
+      </div>
+    </nav>
+  </aside>
+  <div class="mn">
+    <header class="tb">
+      <span class="tb-title"><%= title %></span>
+      <span class="tb-badge"><i class="bi bi-circle-fill"></i>En línea</span>
+    </header>
+    <div class="pg">

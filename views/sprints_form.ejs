@@ -1,0 +1,36 @@
+<%- include('_header') %>
+<div class="ph">
+  <span class="ph-t"><%= title %></span>
+  <a href="/admin/sprints" class="btn btn-g"><i class="bi bi-arrow-left"></i>Volver</a>
+</div>
+<div class="fc">
+  <form action="<%= sprint ? '/admin/sprints/' + sprint.id : '/admin/sprints' %>" method="POST">
+    <div class="f">
+      <label>Nombre</label>
+      <input type="text" name="nombre" value="<%= sprint ? sprint.nombre : '' %>" required>
+    </div>
+    <div class="f">
+      <label>Proyecto</label>
+      <select name="proyectoId" required>
+        <option value="">-- Selecciona un proyecto --</option>
+        <% projects.forEach(p => { %>
+        <option value="<%= p.id %>" <%= sprint && sprint.proyectoId === p.id ? 'selected' : '' %>><%= p.nombre %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="f-row">
+      <div class="f">
+        <label>Fecha de inicio</label>
+        <input type="date" name="fechaInicio" value="<%= isoDate(sprint?.fechaInicio) %>" required>
+      </div>
+      <div class="f">
+        <label>Fecha de fin</label>
+        <input type="date" name="fechaFin" value="<%= isoDate(sprint?.fechaFin) %>" required>
+      </div>
+    </div>
+    <div class="fa">
+      <button type="submit" class="btn btn-p"><i class="bi bi-floppy"></i>Guardar</button>
+    </div>
+  </form>
+</div>
+<%- include('_footer') %>

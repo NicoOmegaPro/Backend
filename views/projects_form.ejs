@@ -1,0 +1,47 @@
+<%- include('_header') %>
+<div class="ph">
+  <span class="ph-t"><%= title %></span>
+  <a href="/admin/projects" class="btn btn-g"><i class="bi bi-arrow-left"></i>Volver</a>
+</div>
+<div class="fc">
+  <form action="<%= project ? '/admin/projects/' + project.id : '/admin/projects' %>" method="POST">
+    <div class="f">
+      <label>Nombre</label>
+      <input type="text" name="nombre" value="<%= project ? project.nombre : '' %>" required>
+    </div>
+    <div class="f">
+      <label>Descripción</label>
+      <textarea name="descripcion" rows="2"><%= project ? (project.descripcion || '') : '' %></textarea>
+    </div>
+    <div class="f">
+      <label>Estado</label>
+      <select name="estado">
+        <% ['ACTIVO','COMPLETADO','ARCHIVADO'].forEach(e => { %>
+        <option value="<%= e %>" <%= project && project.estado === e ? 'selected' : '' %>><%= e %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="f">
+      <label>Equipo</label>
+      <select name="equipoId">
+        <option value="">-- Sin equipo --</option>
+        <% equipos.forEach(e => { %>
+        <option value="<%= e.id %>" <%= project && project.equipoId === e.id ? 'selected' : '' %>><%= e.nombre %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="f">
+      <label>Líder</label>
+      <select name="liderId">
+        <option value="">-- Sin líder --</option>
+        <% users.forEach(u => { %>
+        <option value="<%= u.id %>" <%= project && project.liderId === u.id ? 'selected' : '' %>><%= u.nombre %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="fa">
+      <button type="submit" class="btn btn-p"><i class="bi bi-floppy"></i>Guardar</button>
+    </div>
+  </form>
+</div>
+<%- include('_footer') %>

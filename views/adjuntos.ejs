@@ -1,0 +1,31 @@
+<%- include('_header') %>
+<div class="ph">
+  <span class="ph-t">Adjuntos</span>
+</div>
+<div class="dc">
+  <div class="tw">
+    <table class="dt">
+      <thead>
+        <tr><th>ID</th><th>Nombre</th><th>Tarea</th><th>Subido por</th><th>Fecha</th><th></th></tr>
+      </thead>
+      <tbody>
+        <% adjuntos.forEach(a => { %>
+        <tr>
+          <td class="ci"><%= a.id %></td>
+          <td><i class="bi bi-file-earmark" style="color:#94a3b8;margin-right:5px"></i><%= a.nombre %></td>
+          <td class="cm"><%= a.tarea?.titulo || '-' %></td>
+          <td class="cm"><%= a.usuario?.nombre || '-' %></td>
+          <td class="cm"><%= fmt(a.fecha) %></td>
+          <td class="ca">
+            <form action="/admin/adjuntos/<%= a.id %>/delete" method="POST" style="display:inline" onsubmit="return confirm('¿Eliminar adjunto?')">
+              <button class="ib ib-d"><i class="bi bi-trash"></i></button>
+            </form>
+          </td>
+        </tr>
+        <% }) %>
+        <% if (!adjuntos.length) { %><tr class="erow"><td colspan="6">Sin registros</td></tr><% } %>
+      </tbody>
+    </table>
+  </div>
+</div>
+<%- include('_footer') %>

@@ -1,0 +1,32 @@
+<%- include('_header') %>
+<div class="ph">
+  <span class="ph-t">Equipos</span>
+  <a href="/admin/equipos/create" class="btn btn-p"><i class="bi bi-plus-lg"></i>Nuevo equipo</a>
+</div>
+<div class="dc">
+  <div class="tw">
+    <table class="dt">
+      <thead>
+        <tr><th>ID</th><th>Nombre</th><th>Descripción</th><th>Miembros</th><th></th></tr>
+      </thead>
+      <tbody>
+        <% equipos.forEach(e => { %>
+        <tr>
+          <td class="ci"><%= e.id %></td>
+          <td><strong><%= e.nombre %></strong></td>
+          <td class="cm"><%= e.descripcion || '-' %></td>
+          <td><span class="tg tg-purple"><%= e._count.usuarios %></span></td>
+          <td class="ca">
+            <a href="/admin/equipos/<%= e.id %>/edit" class="ib ib-e"><i class="bi bi-pencil"></i></a>
+            <form action="/admin/equipos/<%= e.id %>/delete" method="POST" style="display:inline" onsubmit="return confirm('¿Eliminar equipo?')">
+              <button class="ib ib-d"><i class="bi bi-trash"></i></button>
+            </form>
+          </td>
+        </tr>
+        <% }) %>
+        <% if (!equipos.length) { %><tr class="erow"><td colspan="5">Sin registros</td></tr><% } %>
+      </tbody>
+    </table>
+  </div>
+</div>
+<%- include('_footer') %>

@@ -1,0 +1,28 @@
+<%- include('_header') %>
+<div class="ph">
+  <span class="ph-t">Historial de actividad</span>
+</div>
+<div class="dc">
+  <div class="tw">
+    <table class="dt">
+      <thead>
+        <tr><th>ID</th><th>Entidad</th><th>ID Entidad</th><th>Acción</th><th>Detalles</th><th>Usuario</th><th>Fecha</th></tr>
+      </thead>
+      <tbody>
+        <% historial.forEach(h => { %>
+        <tr>
+          <td class="ci"><%= h.id %></td>
+          <td><span class="tg tg-purple"><%= h.entidadTipo %></span></td>
+          <td class="ci"><%= h.entidadId %></td>
+          <td><span class="tg tg-blue"><%= h.accion %></span></td>
+          <td class="cm"><%= h.detalles ? (h.detalles.length > 50 ? h.detalles.substring(0,50)+'…' : h.detalles) : '-' %></td>
+          <td class="cm"><%= h.usuario?.nombre || '-' %></td>
+          <td class="cm"><%= fmt(h.fecha) %></td>
+        </tr>
+        <% }) %>
+        <% if (!historial.length) { %><tr class="erow"><td colspan="7">Sin registros</td></tr><% } %>
+      </tbody>
+    </table>
+  </div>
+</div>
+<%- include('_footer') %>

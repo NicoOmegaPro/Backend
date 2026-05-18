@@ -1,0 +1,33 @@
+<%- include('_header') %>
+<div class="ph">
+  <span class="ph-t">Sprints</span>
+  <a href="/admin/sprints/create" class="btn btn-p"><i class="bi bi-plus-lg"></i>Nuevo sprint</a>
+</div>
+<div class="dc">
+  <div class="tw">
+    <table class="dt">
+      <thead>
+        <tr><th>ID</th><th>Nombre</th><th>Proyecto</th><th>Inicio</th><th>Fin</th><th></th></tr>
+      </thead>
+      <tbody>
+        <% sprints.forEach(s => { %>
+        <tr>
+          <td class="ci"><%= s.id %></td>
+          <td><strong><%= s.nombre %></strong></td>
+          <td class="cm"><%= s.proyecto?.nombre || '-' %></td>
+          <td class="cd"><%= fmt(s.fechaInicio) %></td>
+          <td class="cd"><%= fmt(s.fechaFin) %></td>
+          <td class="ca">
+            <a href="/admin/sprints/<%= s.id %>/edit" class="ib ib-e"><i class="bi bi-pencil"></i></a>
+            <form action="/admin/sprints/<%= s.id %>/delete" method="POST" style="display:inline" onsubmit="return confirm('¿Eliminar sprint?')">
+              <button class="ib ib-d"><i class="bi bi-trash"></i></button>
+            </form>
+          </td>
+        </tr>
+        <% }) %>
+        <% if (!sprints.length) { %><tr class="erow"><td colspan="6">Sin registros</td></tr><% } %>
+      </tbody>
+    </table>
+  </div>
+</div>
+<%- include('_footer') %>

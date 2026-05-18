@@ -1,0 +1,33 @@
+<%- include('_header') %>
+<div class="ph">
+  <span class="ph-t">Usuarios</span>
+  <a href="/admin/users/create" class="btn btn-p"><i class="bi bi-plus-lg"></i>Nuevo usuario</a>
+</div>
+<div class="dc">
+  <div class="tw">
+    <table class="dt">
+      <thead>
+        <tr><th>ID</th><th>Nombre</th><th>Email</th><th>Rol</th><th>Descripción</th><th></th></tr>
+      </thead>
+      <tbody>
+        <% users.forEach(u => { %>
+        <tr>
+          <td class="ci"><%= u.id %></td>
+          <td><strong><%= u.nombre %></strong></td>
+          <td class="cm"><%= u.email %></td>
+          <td><span class="tg tg-slate"><%= u.rol?.nombre || '-' %></span></td>
+          <td class="cm"><%= u.descripcion || '-' %></td>
+          <td class="ca">
+            <a href="/admin/users/<%= u.id %>/edit" class="ib ib-e"><i class="bi bi-pencil"></i></a>
+            <form action="/admin/users/<%= u.id %>/delete" method="POST" style="display:inline" onsubmit="return confirm('¿Eliminar usuario?')">
+              <button class="ib ib-d"><i class="bi bi-trash"></i></button>
+            </form>
+          </td>
+        </tr>
+        <% }) %>
+        <% if (!users.length) { %><tr class="erow"><td colspan="6">Sin registros</td></tr><% } %>
+      </tbody>
+    </table>
+  </div>
+</div>
+<%- include('_footer') %>
