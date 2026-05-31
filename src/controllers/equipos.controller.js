@@ -1,82 +1,357 @@
 const prisma = require('../prisma');
+const { registrarActividad } = require('../utils/registrarActividad');
 
+// En un equipo solo existen dos roles: el jefe de equipo y los miembros.
+// Los rangos de proyecto (Jefe de Proyecto, Supervisor, Trabajador) se asignan
+// por proyecto en el modelo ProyectoUsuario, no a nivel de equipo.
+
+/* ─── helpers ─── */
+async function getMembership(usuarioId, equipoId) {
+  return prisma.equipoUsuario.findUnique({
+    where: { usuarioId_equipoId: { usuarioId, equipoId } },
+  });
+}
+
+/* ════════════════════════════════════════
+   GET /equipos  →  mis equipos (aceptados)
+   ════════════════════════════════════════ */
 const getAllEquipos = async (req, res) => {
   try {
+    const { userId, rolId } = req.user;
+
+    const where = rolId === 1
+      ? {}
+      : { usuarios: { some: { usuarioId: userId, estado: 'ACEPTADO' } } };
+
     const equipos = await prisma.equipo.findMany({
+      where,
       include: {
         usuarios: {
-          include: {
-            usuario: {
-              select: { id: true, nombre: true, email: true }
-            }
-          }
+          where: { estado: 'ACEPTADO' },
+          include: { usuario: { select: { id: true, nombre: true, email: true, imagenPerfil: true } } },
         },
-        proyectos: true
-      }
+        proyectos: { select: { id: true, nombre: true, estado: true } },
+      },
     });
-    res.json(equipos);
+
+    // Añadir myRol a cada equipo
+    const result = equipos.map((eq) => {
+      const mem = eq.usuarios.find((u) => u.usuarioId === userId);
+      return { ...eq, myRol: rolId === 1 ? 'JEFE_EQUIPO' : (mem?.rol ?? null) };
+    });
+
+    res.json(result);
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Error al obtener equipos' });
   }
 };
 
+/* ════════════════════════════════════
+   GET /equipos/:id
+   ════════════════════════════════════ */
 const getEquipoById = async (req, res) => {
   try {
     const { id } = req.params;
+    const { userId, rolId } = req.user;
+
     const equipo = await prisma.equipo.findUnique({
       where: { id: parseInt(id) },
       include: {
         usuarios: {
-          include: {
-            usuario: {
-              select: { id: true, nombre: true, email: true }
-            }
-          }
+          include: { usuario: { select: { id: true, nombre: true, email: true, imagenPerfil: true } } },
         },
-        proyectos: true
-      }
+        proyectos: { select: { id: true, nombre: true, estado: true } },
+      },
     });
     if (!equipo) return res.status(404).json({ error: 'Equipo no encontrado' });
-    res.json(equipo);
+
+    const mem = equipo.usuarios.find((u) => u.usuarioId === userId);
+    res.json({ ...equipo, myRol: rolId === 1 ? 'JEFE_EQUIPO' : (mem?.rol ?? null) });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Error al obtener el equipo' });
   }
 };
 
+/* ══════════════════════════════════════════════════════
+   POST /equipos  →  crear equipo + auto JEFE_EQUIPO
+   ══════════════════════════════════════════════════════ */
 const createEquipo = async (req, res) => {
   try {
     const { nombre, descripcion } = req.body;
+    const { id: userId } = req.user;
+
+    if (!nombre?.trim()) return res.status(400).json({ error: 'El nombre es obligatorio' });
+
     const equipo = await prisma.equipo.create({
-      data: { nombre, descripcion }
+      data: {
+        nombre: nombre.trim(),
+        descripcion: descripcion?.trim() || null,
+        usuarios: {
+          create: { usuarioId: userId, rol: 'JEFE_EQUIPO', estado: 'ACEPTADO' },
+        },
+      },
+      include: {
+        usuarios: {
+          include: { usuario: { select: { id: true, nombre: true, email: true } } },
+        },
+      },
     });
-    res.status(201).json(equipo);
+
+    await registrarActividad({
+      usuarioId: userId,
+      entidadTipo: 'EQUIPO',
+      entidadId: equipo.id,
+      accion: 'CREADO',
+      detalles: `creó el equipo «${equipo.nombre}»`,
+    });
+
+    res.status(201).json({ ...equipo, myRol: 'JEFE_EQUIPO' });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Error al crear equipo' });
   }
 };
 
+/* ══════════════════════════════════════════════════════
+   POST /equipos/:id/invitar
+   Body: { email, rol? }
+   ══════════════════════════════════════════════════════ */
+const invitarMiembro = async (req, res) => {
+  try {
+    const equipoId = parseInt(req.params.id);
+    const { userId, rolId } = req.user;
+    const { email } = req.body;
+    const rol = 'MIEMBRO'; // Los invitados entran siempre como miembros del equipo.
+
+    if (!email) return res.status(400).json({ error: 'El email es obligatorio' });
+
+    // Solo JEFE_EQUIPO puede invitar (o admin)
+    if (rolId !== 1) {
+      const mem = await getMembership(userId, equipoId);
+      if (!mem || mem.rol !== 'JEFE_EQUIPO' || mem.estado !== 'ACEPTADO') {
+        return res.status(403).json({ error: 'Solo el jefe de equipo puede invitar miembros' });
+      }
+    }
+
+    // Buscar usuario por email
+    const invitado = await prisma.usuario.findUnique({ where: { email: email.trim() } });
+    if (!invitado) return res.status(404).json({ error: 'No existe ningún usuario con ese email' });
+    if (invitado.id === userId) return res.status(400).json({ error: 'No puedes invitarte a ti mismo' });
+
+    // Comprobar si ya es miembro
+    const yaExiste = await getMembership(invitado.id, equipoId);
+    if (yaExiste) {
+      if (yaExiste.estado === 'ACEPTADO') return res.status(409).json({ error: 'El usuario ya es miembro del equipo' });
+      if (yaExiste.estado === 'PENDIENTE') return res.status(409).json({ error: 'Ya tienes una invitación pendiente para este usuario' });
+      // RECHAZADO: actualizamos a pendiente de nuevo
+      await prisma.equipoUsuario.update({
+        where: { usuarioId_equipoId: { usuarioId: invitado.id, equipoId } },
+        data: { rol, estado: 'PENDIENTE' },
+      });
+    } else {
+      await prisma.equipoUsuario.create({
+        data: { usuarioId: invitado.id, equipoId, rol, estado: 'PENDIENTE' },
+      });
+    }
+
+    // Obtener datos del equipo e invitador para la notificación
+    const equipo = await prisma.equipo.findUnique({ where: { id: equipoId }, select: { nombre: true } });
+    const invitador = await prisma.usuario.findUnique({ where: { id: userId }, select: { nombre: true } });
+
+    const mensajeData = JSON.stringify({
+      tipo: 'INVITACION_EQUIPO',
+      equipoId,
+      equipoNombre: equipo?.nombre,
+      invitadoPor: invitador?.nombre,
+      rol,
+    });
+
+    await prisma.notificacion.create({
+      data: {
+        mensaje: mensajeData,
+        tipo: 'INVITACION_EQUIPO',
+        usuarioId: invitado.id,
+        leida: false,
+      },
+    });
+
+    await registrarActividad({
+      usuarioId: userId,
+      entidadTipo: 'EQUIPO',
+      entidadId: equipoId,
+      accion: 'ACTUALIZADO',
+      detalles: `invitó a ${invitado.nombre} al equipo «${equipo?.nombre || ''}»`,
+    });
+
+    res.json({ message: `Invitación enviada a ${invitado.nombre}` });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al enviar la invitación' });
+  }
+};
+
+/* ══════════════════════════════════════════════════════
+   PUT /equipos/:id/aceptar   →  el usuario acepta su invitación
+   ══════════════════════════════════════════════════════ */
+const aceptarInvitacion = async (req, res) => {
+  try {
+    const equipoId = parseInt(req.params.id);
+    const { id: userId } = req.user;
+
+    const mem = await getMembership(userId, equipoId);
+    if (!mem) return res.status(404).json({ error: 'Invitación no encontrada' });
+    if (mem.estado !== 'PENDIENTE') return res.status(400).json({ error: 'No hay invitación pendiente' });
+
+    await prisma.equipoUsuario.update({
+      where: { usuarioId_equipoId: { usuarioId: userId, equipoId } },
+      data: { estado: 'ACEPTADO' },
+    });
+
+    // Marcar notificación de invitación como leída
+    const notifsRaw = await prisma.notificacion.findMany({
+      where: { usuarioId: userId, tipo: 'INVITACION_EQUIPO', leida: false },
+    });
+    const notifIds = notifsRaw
+      .filter((n) => {
+        try { return JSON.parse(n.mensaje).equipoId === equipoId; } catch { return false; }
+      })
+      .map((n) => n.id);
+
+    if (notifIds.length > 0) {
+      await prisma.notificacion.updateMany({ where: { id: { in: notifIds } }, data: { leida: true } });
+    }
+
+    const equipo = await prisma.equipo.findUnique({ where: { id: equipoId }, select: { nombre: true } });
+    await registrarActividad({
+      usuarioId: userId,
+      entidadTipo: 'EQUIPO',
+      entidadId: equipoId,
+      accion: 'CREADO',
+      detalles: `se unió al equipo «${equipo?.nombre || ''}»`,
+    });
+
+    res.json({ message: 'Invitación aceptada' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al aceptar la invitación' });
+  }
+};
+
+/* ══════════════════════════════════════════════════════
+   DELETE /equipos/:id/rechazar
+   ══════════════════════════════════════════════════════ */
+const rechazarInvitacion = async (req, res) => {
+  try {
+    const equipoId = parseInt(req.params.id);
+    const { id: userId } = req.user;
+
+    const mem = await getMembership(userId, equipoId);
+    if (!mem || mem.estado !== 'PENDIENTE') {
+      return res.status(404).json({ error: 'Invitación no encontrada' });
+    }
+
+    await prisma.equipoUsuario.delete({
+      where: { usuarioId_equipoId: { usuarioId: userId, equipoId } },
+    });
+
+    // Marcar notificación como leída
+    const notifsRaw = await prisma.notificacion.findMany({
+      where: { usuarioId: userId, tipo: 'INVITACION_EQUIPO', leida: false },
+    });
+    const notifIds = notifsRaw
+      .filter((n) => {
+        try { return JSON.parse(n.mensaje).equipoId === equipoId; } catch { return false; }
+      })
+      .map((n) => n.id);
+
+    if (notifIds.length > 0) {
+      await prisma.notificacion.updateMany({ where: { id: { in: notifIds } }, data: { leida: true } });
+    }
+
+    res.json({ message: 'Invitación rechazada' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al rechazar la invitación' });
+  }
+};
+
+/* ══════════════════════════════════════════════════════
+   DELETE /equipos/:id/miembros/:userId
+   ══════════════════════════════════════════════════════ */
+const expulsarMiembro = async (req, res) => {
+  try {
+    const equipoId = parseInt(req.params.id);
+    const targetUserId = parseInt(req.params.userId);
+    const { userId, rolId } = req.user;
+
+    // Solo JEFE_EQUIPO puede expulsar
+    if (rolId !== 1) {
+      const mem = await getMembership(userId, equipoId);
+      if (!mem || mem.rol !== 'JEFE_EQUIPO') {
+        return res.status(403).json({ error: 'Solo el jefe de equipo puede expulsar miembros' });
+      }
+    }
+
+    if (targetUserId === userId) {
+      return res.status(400).json({ error: 'No puedes expulsarte a ti mismo. Usa "abandonar equipo"' });
+    }
+
+    const targetMem = await getMembership(targetUserId, equipoId);
+    if (!targetMem) return res.status(404).json({ error: 'El usuario no es miembro del equipo' });
+    if (targetMem.rol === 'JEFE_EQUIPO') return res.status(400).json({ error: 'No puedes expulsar al jefe de equipo' });
+
+    await prisma.equipoUsuario.delete({
+      where: { usuarioId_equipoId: { usuarioId: targetUserId, equipoId } },
+    });
+
+    res.json({ message: 'Miembro eliminado del equipo' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al expulsar miembro' });
+  }
+};
+
+/* ══════════════════════════════════════════════════════
+   PUT /equipos/:id   DELETE /equipos/:id  (sin cambios funcionales)
+   ══════════════════════════════════════════════════════ */
 const updateEquipo = async (req, res) => {
   try {
     const { id } = req.params;
-    const data = req.body;
-    const equipo = await prisma.equipo.update({
-      where: { id: parseInt(id) },
-      data
-    });
+    const { userId, rolId } = req.user;
+    const equipoId = parseInt(id);
+
+    if (rolId !== 1) {
+      const mem = await getMembership(userId, equipoId);
+      if (!mem || mem.rol !== 'JEFE_EQUIPO') {
+        return res.status(403).json({ error: 'Solo el jefe de equipo puede editar el equipo' });
+      }
+    }
+
+    const { nombre, descripcion } = req.body;
+    const equipo = await prisma.equipo.update({ where: { id: equipoId }, data: { nombre, descripcion } });
     res.json(equipo);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Error al actualizar el equipo' });
+    res.status(500).json({ error: 'Error al actualizar equipo' });
   }
 };
 
 const deleteEquipo = async (req, res) => {
   try {
     const { id } = req.params;
-    await prisma.equipo.delete({ where: { id: parseInt(id) } });
+    const { userId, rolId } = req.user;
+    const equipoId = parseInt(id);
+
+    if (rolId !== 1) {
+      const mem = await getMembership(userId, equipoId);
+      if (!mem || mem.rol !== 'JEFE_EQUIPO') {
+        return res.status(403).json({ error: 'Solo el jefe de equipo puede eliminar el equipo' });
+      }
+    }
+
+    await prisma.equipo.delete({ where: { id: equipoId } });
     res.json({ message: 'Equipo eliminado' });
   } catch (error) {
     console.error(error);
@@ -89,5 +364,9 @@ module.exports = {
   getEquipoById,
   createEquipo,
   updateEquipo,
-  deleteEquipo
+  deleteEquipo,
+  invitarMiembro,
+  aceptarInvitacion,
+  rechazarInvitacion,
+  expulsarMiembro,
 };

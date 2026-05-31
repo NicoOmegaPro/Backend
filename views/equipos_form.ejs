@@ -13,6 +13,17 @@
       <label>Descripción</label>
       <textarea name="descripcion" rows="2"><%= equipo ? (equipo.descripcion || '') : '' %></textarea>
     </div>
+    <div class="f">
+      <label>Miembros</label>
+      <div style="max-height:220px;overflow-y:auto;border:1px solid #ddd;border-radius:6px;padding:8px;display:flex;flex-direction:column;gap:6px;">
+        <% usuarios.forEach(u => { %>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:normal;">
+            <input type="checkbox" name="miembros" value="<%= u.id %>" <%= miembrosIds.includes(u.id) ? 'checked' : '' %>>
+            <%= u.nombre %> <span style="color:#888;font-size:0.85em;">(<%= u.email %>)</span>
+          </label>
+        <% }) %>
+      </div>
+    </div>
     <div class="fa">
       <button type="submit" class="btn btn-p"><i class="bi bi-floppy"></i>Guardar</button>
     </div>

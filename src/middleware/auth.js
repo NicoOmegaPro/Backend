@@ -9,6 +9,10 @@ const authenticate = (req, res, next) => {
   const token = header.split(' ')[1];
   try {
     req.user = jwt.verify(token, process.env.JWT_SECRET);
+    // Normalizar el id del usuario: distintos controladores leen req.user.id o req.user.userId
+    const uid = req.user.id ?? req.user.userId;
+    req.user.id = uid;
+    req.user.userId = uid;
     next();
   } catch {
     return res.status(401).json({ error: 'Token inválido o expirado' });

@@ -1,11 +1,19 @@
 const express = require('express');
 const router = express.Router();
-const equiposController = require('../controllers/equipos.controller');
+const c = require('../controllers/equipos.controller');
 
-router.get('/', equiposController.getAllEquipos);
-router.get('/:id', equiposController.getEquipoById);
-router.post('/', equiposController.createEquipo);
-router.put('/:id', equiposController.updateEquipo);
-router.delete('/:id', equiposController.deleteEquipo);
+router.get('/',    c.getAllEquipos);
+router.get('/:id', c.getEquipoById);
+router.post('/',   c.createEquipo);
+router.put('/:id', c.updateEquipo);
+router.delete('/:id', c.deleteEquipo);
+
+// Invitaciones
+router.post('/:id/invitar',    c.invitarMiembro);
+router.put('/:id/aceptar',     c.aceptarInvitacion);
+router.delete('/:id/rechazar', c.rechazarInvitacion);
+
+// Gestión de miembros (solo JEFE_EQUIPO)
+router.delete('/:id/miembros/:userId',  c.expulsarMiembro);
 
 module.exports = router;

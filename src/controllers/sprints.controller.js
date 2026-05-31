@@ -1,4 +1,5 @@
 const prisma = require('../prisma');
+const { registrarActividad } = require('../utils/registrarActividad');
 
 const getAllSprints = async (req, res) => {
   try {
@@ -44,6 +45,15 @@ const createSprint = async (req, res) => {
         proyectoId: parseInt(proyectoId)
       }
     });
+
+    await registrarActividad({
+      usuarioId: req.user.userId,
+      entidadTipo: 'SPRINT',
+      entidadId: sprint.id,
+      accion: 'CREADO',
+      detalles: `creó el sprint «${sprint.nombre}»`,
+    });
+
     res.status(201).json(sprint);
   } catch (error) {
     console.error(error);

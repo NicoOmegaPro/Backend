@@ -2,11 +2,35 @@ const prisma = require('../prisma');
 
 const getAllHistorial = async (req, res) => {
   try {
+    const { userId, rolId } = req.user;
+
+    let where = {};
+    if (rolId !== 1) {
+      const myMemberships = await prisma.equipoUsuario.findMany({
+        where: { usuarioId: userId },
+        select: { equipoId: true },
+      });
+      const myTeamIds = myMemberships.map((m) => m.equipoId);
+
+      if (myTeamIds.length > 0) {
+        const teammates = await prisma.equipoUsuario.findMany({
+          where: { equipoId: { in: myTeamIds } },
+          select: { usuarioId: true },
+        });
+        const teammateIds = [...new Set(teammates.map((t) => t.usuarioId))];
+        where = { usuarioId: { in: teammateIds } };
+      } else {
+        where = { usuarioId: userId };
+      }
+    }
+
     const historial = await prisma.historialActividad.findMany({
+      where,
       include: {
         usuario: { select: { id: true, nombre: true, email: true } }
       },
-      orderBy: { fecha: 'desc' }
+      orderBy: { fecha: 'desc' },
+      take: 100,
     });
     res.json(historial);
   } catch (error) {

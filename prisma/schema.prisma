@@ -21,9 +21,10 @@ model Usuario {
   password            String
   descripcion         String?
   imagenPerfil        String?              // Ruta local
-  rolId               Int
-  rol                 Rol                  @relation(fields: [rolId], references: [id])
+  rolId               Int?                 // Opcional: solo lo usa el Administrador global. Los usuarios normales no tienen rol global.
+  rol                 Rol?                 @relation(fields: [rolId], references: [id])
   equipos             EquipoUsuario[]
+  proyectos           ProyectoUsuario[]
   tareasAsignadas     Tarea[]              @relation("AsignadoA")
   comentarios         Comentario[]
   adjuntos            Adjunto[]
@@ -43,8 +44,10 @@ model Equipo {
 model EquipoUsuario {
   usuarioId Int
   equipoId  Int
-  usuario   Usuario @relation(fields: [usuarioId], references: [id])
-  equipo    Equipo  @relation(fields: [equipoId], references: [id])
+  rol       String  @default("MIEMBRO")    // JEFE_EQUIPO | MIEMBRO (el rango de proyecto se asigna por proyecto en ProyectoUsuario)
+  estado    String  @default("ACEPTADO")   // PENDIENTE | ACEPTADO | RECHAZADO
+  usuario   Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  equipo    Equipo  @relation(fields: [equipoId], references: [id], onDelete: Cascade)
 
   @@id([usuarioId, equipoId])
 }
@@ -58,8 +61,20 @@ model Proyecto {
   equipo      Equipo?   @relation(fields: [equipoId], references: [id])
   liderId     Int?
   lider       Usuario?  @relation("LiderProyecto", fields: [liderId], references: [id])
+  miembros    ProyectoUsuario[]
   tareas      Tarea[]
   sprints     Sprint[]
+}
+
+// Rol específico de cada miembro dentro de un proyecto concreto.
+model ProyectoUsuario {
+  proyectoId Int
+  usuarioId  Int
+  rol        String   @default("TRABAJADOR") // JEFE_PROYECTO | SUPERVISOR | TRABAJADOR
+  proyecto   Proyecto @relation(fields: [proyectoId], references: [id], onDelete: Cascade)
+  usuario    Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@id([proyectoId, usuarioId])
 }
 
 model Sprint {

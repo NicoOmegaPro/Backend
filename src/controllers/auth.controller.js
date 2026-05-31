@@ -4,7 +4,7 @@ const jwt = require('jsonwebtoken');
 
 const register = async (req, res) => {
   try {
-    const { email, password, nombre, rolId } = req.body;
+    const { email, password, nombre } = req.body;
 
     // Check if user exists
     const existingUser = await prisma.usuario.findUnique({ where: { email } });
@@ -15,13 +15,12 @@ const register = async (req, res) => {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create user
+    // Create user SIN rol global. Los roles se obtienen al crear/unirse a equipos y proyectos.
     const newUser = await prisma.usuario.create({
       data: {
         email,
         password: hashedPassword,
-        nombre,
-        rolId: rolId || 4 // Por defecto TRABAJADOR asumiendo que 4 es su ID, ajusta según tu base de datos
+        nombre
       }
     });
 
@@ -50,7 +49,7 @@ const login = async (req, res) => {
 
     // Generate token
     const token = jwt.sign(
-      { userId: user.id, email: user.email, rolId: user.rolId },
+      { id: user.id, userId: user.id, email: user.email, rolId: user.rolId },
       process.env.JWT_SECRET,
       { expiresIn: '24h' }
     );

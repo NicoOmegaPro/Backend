@@ -12,7 +12,10 @@ async function createRandomUsers(prisma, count) {
         email: faker.internet.email().toLowerCase(),
         password: password,
         descripcion: faker.person.bio(),
-        rolId: faker.number.int({ min: 2, max: 4 })
+        // Sin rol global: los roles son por equipo (JEFE_EQUIPO/MIEMBRO) y por
+        // proyecto (JEFE_PROYECTO/SUPERVISOR/TRABAJADOR). El único rol global es
+        // Administrador, y solo lo tiene la cuenta admin del seeder.
+        rolId: null
       }
     });
     users.push(user);
