@@ -3,6 +3,7 @@ const router = express.Router();
 const path = require('path');
 const multer = require('multer');
 const adjuntosController = require('../controllers/adjuntos.controller');
+const { requireBodyTaskAccess } = require('../utils/permissions');
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -34,9 +35,7 @@ router.post('/upload', upload.single('file'), (req, res) => {
 });
 
 router.get('/', adjuntosController.getAllAdjuntos);
-router.get('/:id', adjuntosController.getAdjuntoById);
-router.post('/', adjuntosController.createAdjunto);
-router.put('/:id', adjuntosController.updateAdjunto);
+router.post('/', requireBodyTaskAccess(), adjuntosController.createAdjunto);
 router.delete('/:id', adjuntosController.deleteAdjunto);
 
 module.exports = router;

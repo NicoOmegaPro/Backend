@@ -1,0 +1,31 @@
+<% if (typeof pagination !== 'undefined' && pagination && pagination.pages > 1) {
+     const cur = pagination.page;
+     const last = pagination.pages;
+     const base = (typeof pagBase !== 'undefined' && pagBase) ? pagBase : ('/admin/' + active);
+     const sep = base.includes('?') ? '&' : '?';
+     let start = Math.max(1, cur - 2);
+     let end = Math.min(last, cur + 2);
+     if (cur <= 3) end = Math.min(last, 5);
+     if (cur >= last - 2) start = Math.max(1, last - 4);
+%>
+<nav class="pgn">
+  <span class="pgn-info">
+    Página <%= cur %> de <%= last %> · <%= pagination.total %> registro<%= pagination.total === 1 ? '' : 's' %>
+  </span>
+  <div class="pgn-list">
+    <a class="pgn-a <%= cur <= 1 ? 'dis' : '' %>" href="<%= base %><%= sep %>page=<%= cur - 1 %>" aria-label="Anterior">‹</a>
+    <% if (start > 1) { %>
+      <a class="pgn-a" href="<%= base %><%= sep %>page=1">1</a>
+      <% if (start > 2) { %><span class="pgn-gap">…</span><% } %>
+    <% } %>
+    <% for (let p = start; p <= end; p++) { %>
+      <a class="pgn-a <%= p === cur ? 'on' : '' %>" href="<%= base %><%= sep %>page=<%= p %>"><%= p %></a>
+    <% } %>
+    <% if (end < last) { %>
+      <% if (end < last - 1) { %><span class="pgn-gap">…</span><% } %>
+      <a class="pgn-a" href="<%= base %><%= sep %>page=<%= last %>"><%= last %></a>
+    <% } %>
+    <a class="pgn-a <%= cur >= last ? 'dis' : '' %>" href="<%= base %><%= sep %>page=<%= cur + 1 %>" aria-label="Siguiente">›</a>
+  </div>
+</nav>
+<% } %>

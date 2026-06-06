@@ -1,8 +1,13 @@
 const prisma = require('../../prisma');
+const { getPageParams, buildMeta } = require('../../utils/paginate');
 
 const index = async (req, res) => {
-  const subtareas = await prisma.subtarea.findMany({ include: { tarea: { select: { titulo: true } } }, orderBy: { id: 'asc' } });
-  res.render('subtareas', { subtareas, title: 'Subtareas', active: 'subtareas' });
+  const { page, limit, skip } = getPageParams(req);
+  const [subtareas, total] = await Promise.all([
+    prisma.subtarea.findMany({ include: { tarea: { select: { titulo: true } } }, orderBy: { id: 'asc' }, skip, take: limit }),
+    prisma.subtarea.count(),
+  ]);
+  res.render('subtareas', { subtareas, title: 'Subtareas', active: 'subtareas', pagination: buildMeta({ page, limit, total }) });
 };
 
 const create = async (req, res) => {

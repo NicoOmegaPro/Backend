@@ -49,14 +49,20 @@
         <% }) %>
       </select>
     </div>
-    <div class="f">
-      <label>Sprint</label>
-      <select name="sprintId">
-        <option value="">-- Sin sprint --</option>
-        <% sprints.forEach(s => { %>
-        <option value="<%= s.id %>" <%= task && task.sprintId === s.id ? 'selected' : '' %>><%= s.nombre %></option>
-        <% }) %>
-      </select>
+    <div class="f-row">
+      <div class="f">
+        <label>Sprint</label>
+        <select name="sprintId">
+          <option value="">-- Sin sprint --</option>
+          <% sprints.forEach(s => { %>
+          <option value="<%= s.id %>" <%= task && task.sprintId === s.id ? 'selected' : '' %>><%= s.nombre %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div class="f">
+        <label>Fecha de vencimiento</label>
+        <input type="date" name="fechaVencimiento" value="<%= isoDate(task?.fechaVencimiento) %>">
+      </div>
     </div>
     <div class="fa">
       <button type="submit" class="btn btn-p"><i class="bi bi-floppy"></i>Guardar</button>

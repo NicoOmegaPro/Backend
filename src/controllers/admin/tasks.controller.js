@@ -1,11 +1,20 @@
 const prisma = require('../../prisma');
+const { getPageParams, buildMeta } = require('../../utils/paginate');
+
+const fmt = (date) => date ? new Date(date).toLocaleDateString('es-ES') : '-';
+const isoDate = (date) => date ? new Date(date).toISOString().split('T')[0] : '';
 
 const index = async (req, res) => {
-  const tasks = await prisma.tarea.findMany({
-    include: { proyecto: { select: { nombre: true } }, asignadoA: { select: { nombre: true } } },
-    orderBy: { id: 'asc' }
-  });
-  res.render('tasks', { tasks, title: 'Tareas', active: 'tasks' });
+  const { page, limit, skip } = getPageParams(req);
+  const [tasks, total] = await Promise.all([
+    prisma.tarea.findMany({
+      include: { proyecto: { select: { nombre: true } }, asignadoA: { select: { nombre: true } } },
+      orderBy: { id: 'asc' },
+      skip, take: limit,
+    }),
+    prisma.tarea.count(),
+  ]);
+  res.render('tasks', { tasks, title: 'Tareas', active: 'tasks', fmt, pagination: buildMeta({ page, limit, total }) });
 };
 
 const create = async (req, res) => {
@@ -14,12 +23,12 @@ const create = async (req, res) => {
     prisma.usuario.findMany({ select: { id: true, nombre: true } }),
     prisma.sprint.findMany({ select: { id: true, nombre: true } })
   ]);
-  res.render('tasks_form', { task: null, projects, users, sprints, title: 'Nueva Tarea', active: 'tasks' });
+  res.render('tasks_form', { task: null, projects, users, sprints, title: 'Nueva Tarea', active: 'tasks', isoDate });
 };
 
 const store = async (req, res) => {
   try {
-    const { titulo, descripcion, estado, prioridad, proyectoId, asignadoAId, sprintId } = req.body;
+    const { titulo, descripcion, estado, prioridad, proyectoId, asignadoAId, sprintId, fechaVencimiento } = req.body;
     await prisma.tarea.create({
       data: {
         titulo, descripcion,
@@ -27,7 +36,8 @@ const store = async (req, res) => {
         prioridad: prioridad || 'MEDIA',
         proyectoId: parseInt(proyectoId),
         asignadoAId: asignadoAId ? parseInt(asignadoAId) : null,
-        sprintId: sprintId ? parseInt(sprintId) : null
+        sprintId: sprintId ? parseInt(sprintId) : null,
+        fechaVencimiento: fechaVencimiento ? new Date(fechaVencimiento) : null
       }
     });
   } catch (err) { console.error(err); }
@@ -41,19 +51,20 @@ const edit = async (req, res) => {
     prisma.usuario.findMany({ select: { id: true, nombre: true } }),
     prisma.sprint.findMany({ select: { id: true, nombre: true } })
   ]);
-  res.render('tasks_form', { task, projects, users, sprints, title: 'Editar Tarea', active: 'tasks' });
+  res.render('tasks_form', { task, projects, users, sprints, title: 'Editar Tarea', active: 'tasks', isoDate });
 };
 
 const update = async (req, res) => {
   try {
-    const { titulo, descripcion, estado, prioridad, proyectoId, asignadoAId, sprintId } = req.body;
+    const { titulo, descripcion, estado, prioridad, proyectoId, asignadoAId, sprintId, fechaVencimiento } = req.body;
     await prisma.tarea.update({
       where: { id: parseInt(req.params.id) },
       data: {
         titulo, descripcion, estado, prioridad,
         proyectoId: parseInt(proyectoId),
         asignadoAId: asignadoAId ? parseInt(asignadoAId) : null,
-        sprintId: sprintId ? parseInt(sprintId) : null
+        sprintId: sprintId ? parseInt(sprintId) : null,
+        fechaVencimiento: fechaVencimiento ? new Date(fechaVencimiento) : null
       }
     });
   } catch (err) { console.error(err); }

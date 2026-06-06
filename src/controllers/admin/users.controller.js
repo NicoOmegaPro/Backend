@@ -1,9 +1,14 @@
 const prisma = require('../../prisma');
 const bcrypt = require('bcrypt');
+const { getPageParams, buildMeta } = require('../../utils/paginate');
 
 const index = async (req, res) => {
-  const users = await prisma.usuario.findMany({ include: { rol: true }, orderBy: { id: 'asc' } });
-  res.render('users', { users, title: 'Usuarios', active: 'users' });
+  const { page, limit, skip } = getPageParams(req);
+  const [users, total] = await Promise.all([
+    prisma.usuario.findMany({ include: { rol: true }, orderBy: { id: 'asc' }, skip, take: limit }),
+    prisma.usuario.count(),
+  ]);
+  res.render('users', { users, title: 'Usuarios', active: 'users', pagination: buildMeta({ page, limit, total }) });
 };
 
 const create = async (req, res) => {

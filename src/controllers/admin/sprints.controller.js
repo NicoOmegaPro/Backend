@@ -1,11 +1,16 @@
 const prisma = require('../../prisma');
+const { getPageParams, buildMeta } = require('../../utils/paginate');
 
 const fmt = (date) => date ? new Date(date).toLocaleDateString('es-ES') : '-';
 const isoDate = (date) => date ? new Date(date).toISOString().split('T')[0] : '';
 
 const index = async (req, res) => {
-  const sprints = await prisma.sprint.findMany({ include: { proyecto: { select: { nombre: true } } }, orderBy: { id: 'asc' } });
-  res.render('sprints', { sprints, title: 'Sprints', active: 'sprints', fmt });
+  const { page, limit, skip } = getPageParams(req);
+  const [sprints, total] = await Promise.all([
+    prisma.sprint.findMany({ include: { proyecto: { select: { nombre: true } } }, orderBy: { id: 'asc' }, skip, take: limit }),
+    prisma.sprint.count(),
+  ]);
+  res.render('sprints', { sprints, title: 'Sprints', active: 'sprints', fmt, pagination: buildMeta({ page, limit, total }) });
 };
 
 const create = async (req, res) => {
@@ -15,8 +20,8 @@ const create = async (req, res) => {
 
 const store = async (req, res) => {
   try {
-    const { nombre, fechaInicio, fechaFin, proyectoId } = req.body;
-    await prisma.sprint.create({ data: { nombre, fechaInicio: new Date(fechaInicio), fechaFin: new Date(fechaFin), proyectoId: parseInt(proyectoId) } });
+    const { nombre, objetivo, estado, fechaInicio, fechaFin, proyectoId } = req.body;
+    await prisma.sprint.create({ data: { nombre, objetivo: objetivo || null, estado: estado || 'PLANIFICADO', fechaInicio: new Date(fechaInicio), fechaFin: new Date(fechaFin), proyectoId: parseInt(proyectoId) } });
   } catch (err) { console.error(err); }
   res.redirect('/admin/sprints');
 };
@@ -31,8 +36,8 @@ const edit = async (req, res) => {
 
 const update = async (req, res) => {
   try {
-    const { nombre, fechaInicio, fechaFin, proyectoId } = req.body;
-    await prisma.sprint.update({ where: { id: parseInt(req.params.id) }, data: { nombre, fechaInicio: new Date(fechaInicio), fechaFin: new Date(fechaFin), proyectoId: parseInt(proyectoId) } });
+    const { nombre, objetivo, estado, fechaInicio, fechaFin, proyectoId } = req.body;
+    await prisma.sprint.update({ where: { id: parseInt(req.params.id) }, data: { nombre, objetivo: objetivo || null, estado, fechaInicio: new Date(fechaInicio), fechaFin: new Date(fechaFin), proyectoId: parseInt(proyectoId) } });
   } catch (err) { console.error(err); }
   res.redirect('/admin/sprints');
 };

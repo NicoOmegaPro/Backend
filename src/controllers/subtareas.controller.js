@@ -1,11 +1,33 @@
 const prisma = require('../prisma');
+const { canAccessProject } = require('../utils/permissions');
 
+// Carga la subtarea de :id con su tarea/proyecto y valida acceso. Devuelve la subtarea o null.
+async function loadSubtareaConAcceso(req, res) {
+  const subtarea = await prisma.subtarea.findUnique({
+    where: { id: parseInt(req.params.id) },
+    include: { tarea: { include: { proyecto: true } } },
+  });
+  if (!subtarea) {
+    res.status(404).json({ error: 'Subtarea no encontrada' });
+    return null;
+  }
+  const { userId, rolId } = req.user;
+  if (!(await canAccessProject(userId, rolId, subtarea.tarea.proyecto))) {
+    res.status(403).json({ error: 'No tienes acceso a esta subtarea' });
+    return null;
+  }
+  return subtarea;
+}
+
+// GET /subtareas?tareaId=
 const getAllSubtareas = async (req, res) => {
   try {
+    const { tareaId } = req.query;
+    if (!tareaId) return res.status(400).json({ error: 'Falta el parámetro tareaId' });
+
     const subtareas = await prisma.subtarea.findMany({
-      include: {
-        tarea: { select: { id: true, titulo: true, estado: true } }
-      }
+      where: { tareaId: parseInt(tareaId) },
+      orderBy: { id: 'asc' },
     });
     res.json(subtareas);
   } catch (error) {
@@ -16,14 +38,8 @@ const getAllSubtareas = async (req, res) => {
 
 const getSubtareaById = async (req, res) => {
   try {
-    const { id } = req.params;
-    const subtarea = await prisma.subtarea.findUnique({
-      where: { id: parseInt(id) },
-      include: {
-        tarea: { select: { id: true, titulo: true, estado: true } }
-      }
-    });
-    if (!subtarea) return res.status(404).json({ error: 'Subtarea no encontrada' });
+    const subtarea = await loadSubtareaConAcceso(req, res);
+    if (!subtarea) return;
     res.json(subtarea);
   } catch (error) {
     console.error(error);
@@ -31,15 +47,12 @@ const getSubtareaById = async (req, res) => {
   }
 };
 
+// POST /subtareas  { titulo, completada?, tareaId }  → req.task de requireBodyTaskAccess
 const createSubtarea = async (req, res) => {
   try {
-    const { titulo, completada, tareaId } = req.body;
+    const { titulo, completada } = req.body;
     const subtarea = await prisma.subtarea.create({
-      data: {
-        titulo,
-        completada: completada ?? false,
-        tareaId: parseInt(tareaId)
-      }
+      data: { titulo, completada: completada ?? false, tareaId: req.task.id },
     });
     res.status(201).json(subtarea);
   } catch (error) {
@@ -50,12 +63,15 @@ const createSubtarea = async (req, res) => {
 
 const updateSubtarea = async (req, res) => {
   try {
-    const { id } = req.params;
-    const data = req.body;
-    const subtarea = await prisma.subtarea.update({
-      where: { id: parseInt(id) },
-      data
-    });
+    const existing = await loadSubtareaConAcceso(req, res);
+    if (!existing) return;
+
+    const { titulo, completada } = req.body;
+    const data = {};
+    if (titulo !== undefined) data.titulo = titulo;
+    if (completada !== undefined) data.completada = completada;
+
+    const subtarea = await prisma.subtarea.update({ where: { id: existing.id }, data });
     res.json(subtarea);
   } catch (error) {
     console.error(error);
@@ -65,8 +81,9 @@ const updateSubtarea = async (req, res) => {
 
 const deleteSubtarea = async (req, res) => {
   try {
-    const { id } = req.params;
-    await prisma.subtarea.delete({ where: { id: parseInt(id) } });
+    const existing = await loadSubtareaConAcceso(req, res);
+    if (!existing) return;
+    await prisma.subtarea.delete({ where: { id: existing.id } });
     res.json({ message: 'Subtarea eliminada' });
   } catch (error) {
     console.error(error);
@@ -79,5 +96,5 @@ module.exports = {
   getSubtareaById,
   createSubtarea,
   updateSubtarea,
-  deleteSubtarea
+  deleteSubtarea,
 };

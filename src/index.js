@@ -17,6 +17,7 @@ const adjuntosRoutes = require('./routes/adjuntos.routes');
 const etiquetasRoutes = require('./routes/etiquetas.routes');
 const notificacionesRoutes = require('./routes/notificaciones.routes');
 const historialRoutes = require('./routes/historial.routes');
+const dashboardRoutes = require('./routes/dashboard.routes');
 const adminRoutes = require('./routes/admin.routes');
 const { authenticate } = require('./middleware/auth');
 
@@ -47,6 +48,7 @@ app.use('/api/adjuntos', authenticate, adjuntosRoutes);
 app.use('/api/etiquetas', authenticate, etiquetasRoutes);
 app.use('/api/notificaciones', authenticate, notificacionesRoutes);
 app.use('/api/historial', authenticate, historialRoutes);
+app.use('/api/dashboard', authenticate, dashboardRoutes);
 app.use('/admin', adminRoutes);
 
 // Health check endpoint

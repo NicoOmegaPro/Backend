@@ -4,6 +4,7 @@ const path = require('path');
 const multer = require('multer');
 const usersController = require('../controllers/users.controller');
 
+
 const avatarStorage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, path.join(__dirname, '../../public/uploads')),
   filename: (req, file, cb) => {
@@ -26,5 +27,6 @@ router.get('/:id', usersController.getUserById);
 router.put('/:id', usersController.updateUser);
 router.delete('/:id', usersController.deleteUser);
 router.post('/:id/avatar', uploadAvatar.single('avatar'), usersController.uploadAvatar);
+router.post('/:id/change-password', usersController.changePassword);
 
 module.exports = router;

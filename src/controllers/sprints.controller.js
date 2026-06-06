@@ -1,13 +1,25 @@
 const prisma = require('../prisma');
 const { registrarActividad } = require('../utils/registrarActividad');
+const { canAccessProject, rolEnProyecto, ROLES_GESTION } = require('../utils/permissions');
 
+// GET /sprints?proyectoId=  → sprints de un proyecto (requiere acceso)
 const getAllSprints = async (req, res) => {
   try {
+    const { proyectoId } = req.query;
+    if (!proyectoId) return res.status(400).json({ error: 'Falta el parámetro proyectoId' });
+
+    const project = await prisma.proyecto.findUnique({ where: { id: parseInt(proyectoId) } });
+    if (!project) return res.status(404).json({ error: 'Proyecto no encontrado' });
+
+    const { userId, rolId } = req.user;
+    if (!(await canAccessProject(userId, rolId, project))) {
+      return res.status(403).json({ error: 'No tienes acceso a este proyecto' });
+    }
+
     const sprints = await prisma.sprint.findMany({
-      include: {
-        proyecto: { select: { id: true, nombre: true, estado: true } },
-        tareas: true
-      }
+      where: { proyectoId: project.id },
+      orderBy: { fechaInicio: 'desc' },
+      include: { tareas: { select: { id: true, estado: true } } },
     });
     res.json(sprints);
   } catch (error) {
@@ -18,15 +30,16 @@ const getAllSprints = async (req, res) => {
 
 const getSprintById = async (req, res) => {
   try {
-    const { id } = req.params;
     const sprint = await prisma.sprint.findUnique({
-      where: { id: parseInt(id) },
-      include: {
-        proyecto: { select: { id: true, nombre: true, estado: true } },
-        tareas: true
-      }
+      where: { id: parseInt(req.params.id) },
+      include: { proyecto: true, tareas: true },
     });
     if (!sprint) return res.status(404).json({ error: 'Sprint no encontrado' });
+
+    const { userId, rolId } = req.user;
+    if (!(await canAccessProject(userId, rolId, sprint.proyecto))) {
+      return res.status(403).json({ error: 'No tienes acceso a este sprint' });
+    }
     res.json(sprint);
   } catch (error) {
     console.error(error);
@@ -34,24 +47,28 @@ const getSprintById = async (req, res) => {
   }
 };
 
+// POST /sprints  → req.project / req.myProjectRole de requireBodyProjectAccess
 const createSprint = async (req, res) => {
   try {
-    const { nombre, fechaInicio, fechaFin, proyectoId } = req.body;
+    if (!ROLES_GESTION.includes(req.myProjectRole)) {
+      return res.status(403).json({ error: 'Solo los jefes pueden crear sprints' });
+    }
+    const { nombre, objetivo, estado, fechaInicio, fechaFin } = req.body;
+
     const sprint = await prisma.sprint.create({
       data: {
         nombre,
-        fechaInicio: new Date(fechaInicio),
-        fechaFin: new Date(fechaFin),
-        proyectoId: parseInt(proyectoId)
-      }
+        objetivo: objetivo ?? null,
+        estado: estado ?? 'PLANIFICADO',
+        fechaInicio,
+        fechaFin,
+        proyectoId: req.project.id,
+      },
     });
 
     await registrarActividad({
-      usuarioId: req.user.userId,
-      entidadTipo: 'SPRINT',
-      entidadId: sprint.id,
-      accion: 'CREADO',
-      detalles: `creó el sprint «${sprint.nombre}»`,
+      usuarioId: req.user.userId, entidadTipo: 'SPRINT', entidadId: sprint.id,
+      accion: 'CREADO', detalles: `creó el sprint «${sprint.nombre}»`,
     });
 
     res.status(201).json(sprint);
@@ -61,20 +78,40 @@ const createSprint = async (req, res) => {
   }
 };
 
+// Carga el sprint de :id, valida que el usuario sea gestor del proyecto. Devuelve el sprint o null.
+async function loadSprintGestion(req, res) {
+  const sprint = await prisma.sprint.findUnique({
+    where: { id: parseInt(req.params.id) },
+    include: { proyecto: true },
+  });
+  if (!sprint) {
+    res.status(404).json({ error: 'Sprint no encontrado' });
+    return null;
+  }
+  const { userId, rolId } = req.user;
+  const miRol = await rolEnProyecto(userId, rolId, sprint.proyecto);
+  if (!ROLES_GESTION.includes(miRol)) {
+    res.status(403).json({ error: 'Solo los jefes pueden modificar sprints' });
+    return null;
+  }
+  return sprint;
+}
+
 const updateSprint = async (req, res) => {
   try {
-    const { id } = req.params;
-    const { fechaInicio, fechaFin, ...data } = req.body;
-    const updateData = {
-      ...data,
-      ...(fechaInicio ? { fechaInicio: new Date(fechaInicio) } : {}),
-      ...(fechaFin ? { fechaFin: new Date(fechaFin) } : {})
-    };
-    const sprint = await prisma.sprint.update({
-      where: { id: parseInt(id) },
-      data: updateData
-    });
-    res.json(sprint);
+    const sprint = await loadSprintGestion(req, res);
+    if (!sprint) return;
+
+    const { nombre, objetivo, estado, fechaInicio, fechaFin } = req.body;
+    const data = {};
+    if (nombre !== undefined) data.nombre = nombre;
+    if (objetivo !== undefined) data.objetivo = objetivo;
+    if (estado !== undefined) data.estado = estado;
+    if (fechaInicio) data.fechaInicio = fechaInicio;
+    if (fechaFin) data.fechaFin = fechaFin;
+
+    const updated = await prisma.sprint.update({ where: { id: sprint.id }, data });
+    res.json(updated);
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Error al actualizar el sprint' });
@@ -83,8 +120,9 @@ const updateSprint = async (req, res) => {
 
 const deleteSprint = async (req, res) => {
   try {
-    const { id } = req.params;
-    await prisma.sprint.delete({ where: { id: parseInt(id) } });
+    const sprint = await loadSprintGestion(req, res);
+    if (!sprint) return;
+    await prisma.sprint.delete({ where: { id: sprint.id } });
     res.json({ message: 'Sprint eliminado' });
   } catch (error) {
     console.error(error);
@@ -97,5 +135,5 @@ module.exports = {
   getSprintById,
   createSprint,
   updateSprint,
-  deleteSprint
+  deleteSprint,
 };

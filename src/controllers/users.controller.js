@@ -1,4 +1,6 @@
 const prisma = require('../prisma');
+const bcrypt = require('bcrypt');
+const { getPageParams, buildMeta } = require('../utils/paginate');
 
 const getAllUsers = async (req, res) => {
   try {
@@ -26,16 +28,39 @@ const getAllUsers = async (req, res) => {
       // Si es JEFE_EQUIPO: where = {} → ve todos
     }
 
-    const users = await prisma.usuario.findMany({
-      where,
-      select: {
-        id: true,
-        nombre: true,
-        email: true,
-        descripcion: true,
-        rol: true,
-      },
-    });
+    // Búsqueda opcional por nombre o email (?q=)
+    const q = (req.query.q || '').trim();
+    if (q) {
+      where = {
+        ...where,
+        OR: [
+          { nombre: { contains: q, mode: 'insensitive' } },
+          { email: { contains: q, mode: 'insensitive' } },
+        ],
+      };
+    }
+
+    const select = {
+      id: true,
+      nombre: true,
+      email: true,
+      descripcion: true,
+      imagenPerfil: true,
+      rol: true,
+    };
+
+    // Compatibilidad: solo paginamos si llega ?page. Sin él, devolvemos el array
+    // completo de siempre (lo usan selects/desplegables que necesitan todos los usuarios).
+    if (req.query.page !== undefined || req.query.limit !== undefined) {
+      const { page, limit, skip } = getPageParams(req, { defaultLimit: 20 });
+      const [items, total] = await Promise.all([
+        prisma.usuario.findMany({ where, select, orderBy: { nombre: 'asc' }, skip, take: limit }),
+        prisma.usuario.count({ where }),
+      ]);
+      return res.json({ items, ...buildMeta({ page, limit, total }) });
+    }
+
+    const users = await prisma.usuario.findMany({ where, select, orderBy: { nombre: 'asc' } });
     res.json(users);
   } catch (error) {
     console.error(error);
@@ -55,8 +80,18 @@ const getUserById = async (req, res) => {
         descripcion: true,
         imagenPerfil: true,
         rolId: true,
-        rol: true
-      }
+        rol: true,
+        equipos: {
+          where: { estado: 'ACEPTADO' },
+          include: {
+            equipo: {
+              include: {
+                _count: { select: { usuarios: true, proyectos: true } },
+              },
+            },
+          },
+        },
+      },
     });
     if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
     res.json(user);
@@ -116,10 +151,37 @@ const uploadAvatar = async (req, res) => {
   }
 };
 
+const changePassword = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword)
+      return res.status(400).json({ error: 'Faltan campos requeridos' });
+    if (newPassword.length < 6)
+      return res.status(400).json({ error: 'La nueva contraseña debe tener al menos 6 caracteres' });
+
+    const user = await prisma.usuario.findUnique({ where: { id: parseInt(id) } });
+    if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+    const valid = await bcrypt.compare(currentPassword, user.password);
+    if (!valid) return res.status(401).json({ error: 'La contraseña actual es incorrecta' });
+
+    const hashed = await bcrypt.hash(newPassword, 10);
+    await prisma.usuario.update({ where: { id: parseInt(id) }, data: { password: hashed } });
+
+    res.json({ message: 'Contraseña actualizada correctamente' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al cambiar la contraseña' });
+  }
+};
+
 module.exports = {
   getAllUsers,
   getUserById,
   updateUser,
   deleteUser,
   uploadAvatar,
+  changePassword,
 };

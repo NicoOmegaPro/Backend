@@ -1,8 +1,13 @@
 const prisma = require('../../prisma');
+const { getPageParams, buildMeta } = require('../../utils/paginate');
 
 const index = async (req, res) => {
-  const etiquetas = await prisma.etiqueta.findMany({ include: { _count: { select: { tareas: true } } }, orderBy: { id: 'asc' } });
-  res.render('etiquetas', { etiquetas, title: 'Etiquetas', active: 'etiquetas' });
+  const { page, limit, skip } = getPageParams(req);
+  const [etiquetas, total] = await Promise.all([
+    prisma.etiqueta.findMany({ include: { _count: { select: { tareas: true } } }, orderBy: { id: 'asc' }, skip, take: limit }),
+    prisma.etiqueta.count(),
+  ]);
+  res.render('etiquetas', { etiquetas, title: 'Etiquetas', active: 'etiquetas', pagination: buildMeta({ page, limit, total }) });
 };
 
 const create = (req, res) => {

@@ -64,6 +64,8 @@ model Proyecto {
   miembros    ProyectoUsuario[]
   tareas      Tarea[]
   sprints     Sprint[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @default(now()) @updatedAt
 }
 
 // Rol específico de cada miembro dentro de un proyecto concreto.
@@ -80,29 +82,35 @@ model ProyectoUsuario {
 model Sprint {
   id          Int       @id @default(autoincrement())
   nombre      String
+  objetivo    String?   // Meta / goal del sprint
+  estado      String    @default("PLANIFICADO") // PLANIFICADO | ACTIVO | COMPLETADO
   fechaInicio DateTime
   fechaFin    DateTime
   proyectoId  Int
-  proyecto    Proyecto  @relation(fields: [proyectoId], references: [id])
+  proyecto    Proyecto  @relation(fields: [proyectoId], references: [id], onDelete: Cascade)
   tareas      Tarea[]
 }
 
 model Tarea {
-  id          Int          @id @default(autoincrement())
-  titulo      String
-  descripcion String?
-  estado      String       @default("PENDIENTE") // PENDIENTE, EN_PROGRESO, EN_REVISION, FINALIZADO
-  prioridad   String       @default("MEDIA")     // BAJA, MEDIA, ALTA, URGENTE
-  proyectoId  Int
-  proyecto    Proyecto     @relation(fields: [proyectoId], references: [id])
-  sprintId    Int?
-  sprint      Sprint?      @relation(fields: [sprintId], references: [id])
-  asignadoAId Int?
-  asignadoA   Usuario?     @relation("AsignadoA", fields: [asignadoAId], references: [id])
-  subtareas   Subtarea[]
-  comentarios Comentario[]
-  adjuntos    Adjunto[]
-  etiquetas   TareaEtiqueta[]
+  id              Int          @id @default(autoincrement())
+  titulo          String
+  descripcion     String?
+  estado          String       @default("PENDIENTE") // PENDIENTE, EN_PROGRESO, EN_REVISION, FINALIZADO
+  prioridad       String       @default("MEDIA")     // BAJA, MEDIA, ALTA, URGENTE
+  orden           Int          @default(0)           // posición dentro de su columna (drag & drop)
+  fechaVencimiento DateTime?                         // due date
+  proyectoId      Int
+  proyecto        Proyecto     @relation(fields: [proyectoId], references: [id], onDelete: Cascade)
+  sprintId        Int?
+  sprint          Sprint?      @relation(fields: [sprintId], references: [id], onDelete: SetNull)
+  asignadoAId     Int?
+  asignadoA       Usuario?     @relation("AsignadoA", fields: [asignadoAId], references: [id])
+  subtareas       Subtarea[]
+  comentarios     Comentario[]
+  adjuntos        Adjunto[]
+  etiquetas       TareaEtiqueta[]
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @default(now()) @updatedAt
 }
 
 model Subtarea {
@@ -110,7 +118,7 @@ model Subtarea {
   titulo      String
   completada  Boolean @default(false)
   tareaId     Int
-  tarea       Tarea   @relation(fields: [tareaId], references: [id])
+  tarea       Tarea   @relation(fields: [tareaId], references: [id], onDelete: Cascade)
 }
 
 model Comentario {
@@ -118,7 +126,7 @@ model Comentario {
   contenido String
   fecha     DateTime @default(now())
   tareaId   Int
-  tarea     Tarea    @relation(fields: [tareaId], references: [id])
+  tarea     Tarea    @relation(fields: [tareaId], references: [id], onDelete: Cascade)
   autorId   Int
   autor     Usuario  @relation(fields: [autorId], references: [id])
 }
@@ -129,7 +137,7 @@ model Adjunto {
   nombre    String
   fecha     DateTime @default(now())
   tareaId   Int
-  tarea     Tarea    @relation(fields: [tareaId], references: [id])
+  tarea     Tarea    @relation(fields: [tareaId], references: [id], onDelete: Cascade)
   subidoPor Int
   usuario   Usuario  @relation(fields: [subidoPor], references: [id])
 }
@@ -144,8 +152,8 @@ model Etiqueta {
 model TareaEtiqueta {
   tareaId    Int
   etiquetaId Int
-  tarea      Tarea    @relation(fields: [tareaId], references: [id])
-  etiqueta   Etiqueta @relation(fields: [etiquetaId], references: [id])
+  tarea      Tarea    @relation(fields: [tareaId], references: [id], onDelete: Cascade)
+  etiqueta   Etiqueta @relation(fields: [etiquetaId], references: [id], onDelete: Cascade)
 
   @@id([tareaId, etiquetaId])
 }

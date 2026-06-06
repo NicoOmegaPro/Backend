@@ -7,13 +7,16 @@
   <div class="tw">
     <table class="dt">
       <thead>
-        <tr><th>ID</th><th>Nombre</th><th>Proyecto</th><th>Inicio</th><th>Fin</th><th></th></tr>
+        <tr><th>ID</th><th>Nombre</th><th>Estado</th><th>Objetivo</th><th>Proyecto</th><th>Inicio</th><th>Fin</th><th></th></tr>
       </thead>
       <tbody>
+        <% const sprEstadoCls = { PLANIFICADO:'tg-slate', ACTIVO:'tg-blue', COMPLETADO:'tg-green' }; %>
         <% sprints.forEach(s => { %>
         <tr>
           <td class="ci"><%= s.id %></td>
           <td><strong><%= s.nombre %></strong></td>
+          <td><span class="tg <%= sprEstadoCls[s.estado] || 'tg-slate' %>"><%= s.estado || '-' %></span></td>
+          <td class="cm"><%= s.objetivo ? (s.objetivo.length > 40 ? s.objetivo.substring(0,40)+'…' : s.objetivo) : '-' %></td>
           <td class="cm"><%= s.proyecto?.nombre || '-' %></td>
           <td class="cd"><%= fmt(s.fechaInicio) %></td>
           <td class="cd"><%= fmt(s.fechaFin) %></td>
@@ -25,9 +28,10 @@
           </td>
         </tr>
         <% }) %>
-        <% if (!sprints.length) { %><tr class="erow"><td colspan="6">Sin registros</td></tr><% } %>
+        <% if (!sprints.length) { %><tr class="erow"><td colspan="8">Sin registros</td></tr><% } %>
       </tbody>
     </table>
   </div>
 </div>
+<%- include('_pagination') %>
 <%- include('_footer') %>

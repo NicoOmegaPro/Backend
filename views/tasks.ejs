@@ -7,7 +7,7 @@
   <div class="tw">
     <table class="dt">
       <thead>
-        <tr><th>ID</th><th>Título</th><th>Estado</th><th>Prioridad</th><th>Proyecto</th><th>Asignado a</th><th></th></tr>
+        <tr><th>ID</th><th>Título</th><th>Estado</th><th>Prioridad</th><th>Proyecto</th><th>Asignado a</th><th>Vence</th><th></th></tr>
       </thead>
       <tbody>
         <%
@@ -22,6 +22,7 @@
           <td><span class="tg <%= prioCls[t.prioridad] || 'tg-slate' %>"><%= t.prioridad %></span></td>
           <td class="cm"><%= t.proyecto?.nombre || '-' %></td>
           <td class="cm"><%= t.asignadoA?.nombre || '-' %></td>
+          <td class="cd"><%= t.fechaVencimiento ? fmt(t.fechaVencimiento) : '-' %></td>
           <td class="ca">
             <a href="/admin/tasks/<%= t.id %>/edit" class="ib ib-e"><i class="bi bi-pencil"></i></a>
             <form action="/admin/tasks/<%= t.id %>/delete" method="POST" style="display:inline" onsubmit="return confirm('¿Eliminar tarea?')">
@@ -30,9 +31,10 @@
           </td>
         </tr>
         <% }) %>
-        <% if (!tasks.length) { %><tr class="erow"><td colspan="7">Sin registros</td></tr><% } %>
+        <% if (!tasks.length) { %><tr class="erow"><td colspan="8">Sin registros</td></tr><% } %>
       </tbody>
     </table>
   </div>
 </div>
+<%- include('_pagination') %>
 <%- include('_footer') %>

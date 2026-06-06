@@ -1,8 +1,11 @@
 const prisma = require('../prisma');
 
+// GET /historial?page=&limit=
 const getAllHistorial = async (req, res) => {
   try {
     const { userId, rolId } = req.user;
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 30));
 
     let where = {};
     if (rolId !== 1) {
@@ -24,15 +27,18 @@ const getAllHistorial = async (req, res) => {
       }
     }
 
-    const historial = await prisma.historialActividad.findMany({
-      where,
-      include: {
-        usuario: { select: { id: true, nombre: true, email: true } }
-      },
-      orderBy: { fecha: 'desc' },
-      take: 100,
-    });
-    res.json(historial);
+    const [items, total] = await Promise.all([
+      prisma.historialActividad.findMany({
+        where,
+        include: { usuario: { select: { id: true, nombre: true, email: true, imagenPerfil: true } } },
+        orderBy: { fecha: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      prisma.historialActividad.count({ where }),
+    ]);
+
+    res.json({ items, total, page, limit, pages: Math.ceil(total / limit) });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Error al obtener el historial de actividades' });

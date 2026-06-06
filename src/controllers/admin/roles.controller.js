@@ -1,8 +1,13 @@
 const prisma = require('../../prisma');
+const { getPageParams, buildMeta } = require('../../utils/paginate');
 
 const index = async (req, res) => {
-  const roles = await prisma.rol.findMany({ include: { _count: { select: { usuarios: true } } }, orderBy: { id: 'asc' } });
-  res.render('roles', { roles, title: 'Roles', active: 'roles' });
+  const { page, limit, skip } = getPageParams(req);
+  const [roles, total] = await Promise.all([
+    prisma.rol.findMany({ include: { _count: { select: { usuarios: true } } }, orderBy: { id: 'asc' }, skip, take: limit }),
+    prisma.rol.count(),
+  ]);
+  res.render('roles', { roles, title: 'Roles', active: 'roles', pagination: buildMeta({ page, limit, total }) });
 };
 
 const create = (req, res) => {

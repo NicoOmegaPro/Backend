@@ -1,5 +1,6 @@
 const prisma = require('../prisma');
 const { registrarActividad } = require('../utils/registrarActividad');
+const { getPageParams, buildMeta } = require('../utils/paginate');
 
 // En un equipo solo existen dos roles: el jefe de equipo y los miembros.
 // Los rangos de proyecto (Jefe de Proyecto, Supervisor, Trabajador) se asignan
@@ -23,24 +24,32 @@ const getAllEquipos = async (req, res) => {
       ? {}
       : { usuarios: { some: { usuarioId: userId, estado: 'ACEPTADO' } } };
 
-    const equipos = await prisma.equipo.findMany({
-      where,
-      include: {
-        usuarios: {
-          where: { estado: 'ACEPTADO' },
-          include: { usuario: { select: { id: true, nombre: true, email: true, imagenPerfil: true } } },
-        },
-        proyectos: { select: { id: true, nombre: true, estado: true } },
+    const include = {
+      usuarios: {
+        where: { estado: 'ACEPTADO' },
+        include: { usuario: { select: { id: true, nombre: true, email: true, imagenPerfil: true } } },
       },
-    });
+      proyectos: { select: { id: true, nombre: true, estado: true } },
+    };
 
     // Añadir myRol a cada equipo
-    const result = equipos.map((eq) => {
+    const withRol = (eq) => {
       const mem = eq.usuarios.find((u) => u.usuarioId === userId);
       return { ...eq, myRol: rolId === 1 ? 'JEFE_EQUIPO' : (mem?.rol ?? null) };
-    });
+    };
 
-    res.json(result);
+    // Compatibilidad: paginamos solo si llega ?page; si no, array completo de siempre.
+    if (req.query.page !== undefined || req.query.limit !== undefined) {
+      const { page, limit, skip } = getPageParams(req, { defaultLimit: 10 });
+      const [equipos, total] = await Promise.all([
+        prisma.equipo.findMany({ where, include, orderBy: { id: 'asc' }, skip, take: limit }),
+        prisma.equipo.count({ where }),
+      ]);
+      return res.json({ items: equipos.map(withRol), ...buildMeta({ page, limit, total }) });
+    }
+
+    const equipos = await prisma.equipo.findMany({ where, include });
+    res.json(equipos.map(withRol));
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Error al obtener equipos' });

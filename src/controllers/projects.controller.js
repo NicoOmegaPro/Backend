@@ -1,30 +1,7 @@
 const prisma = require('../prisma');
 const { registrarActividad } = require('../utils/registrarActividad');
-
-// Roles válidos dentro de un proyecto
-const ROLES_PROYECTO = ['JEFE_PROYECTO', 'SUPERVISOR', 'TRABAJADOR'];
-
-/* ─── helpers ─── */
-
-// ¿Es el usuario jefe del equipo dueño del proyecto?
-async function esJefeDeEquipo(userId, equipoId) {
-  if (!equipoId) return false;
-  const mem = await prisma.equipoUsuario.findUnique({
-    where: { usuarioId_equipoId: { usuarioId: userId, equipoId } },
-  });
-  return mem?.estado === 'ACEPTADO' && mem.rol === 'JEFE_EQUIPO';
-}
-
-// Devuelve el rol del usuario en un proyecto: 'JEFE_EQUIPO' si lidera el equipo,
-// el rol de ProyectoUsuario si es miembro, o null si no participa.
-async function rolEnProyecto(userId, rolId, project) {
-  if (rolId === 1) return 'JEFE_EQUIPO'; // admin global
-  if (await esJefeDeEquipo(userId, project.equipoId)) return 'JEFE_EQUIPO';
-  const pm = await prisma.proyectoUsuario.findUnique({
-    where: { proyectoId_usuarioId: { proyectoId: project.id, usuarioId: userId } },
-  });
-  return pm?.rol ?? null;
-}
+const { notificar } = require('../utils/notificar');
+const { ROLES_PROYECTO, ROLES_GESTION, esJefeDeEquipo, rolEnProyecto } = require('../utils/permissions');
 
 const getAllProjects = async (req, res) => {
   try {
@@ -64,7 +41,11 @@ const getProjectById = async (req, res) => {
       include: {
         lider: { select: { id: true, nombre: true } },
         equipo: true,
-        tareas: true,
+        tareas: {
+          include: { asignadoA: { select: { id: true, nombre: true, imagenPerfil: true } } },
+          orderBy: [{ orden: 'asc' }, { id: 'asc' }],
+        },
+        sprints: { orderBy: { fechaInicio: 'desc' } },
         miembros: {
           include: { usuario: { select: { id: true, nombre: true, email: true, imagenPerfil: true } } },
         },
@@ -72,7 +53,8 @@ const getProjectById = async (req, res) => {
     });
     if (!project) return res.status(404).json({ error: 'Proyecto no encontrado' });
 
-    const myProjectRole = await rolEnProyecto(userId, rolId, project);
+    // req.myProjectRole lo provee requireProjectAccess; si no, se calcula.
+    const myProjectRole = req.myProjectRole ?? (await rolEnProyecto(userId, rolId, project));
 
     res.json({ ...project, myProjectRole });
   } catch (error) {
@@ -140,6 +122,14 @@ const createProject = async (req, res) => {
       detalles: `creó el proyecto «${project.nombre}»`,
     });
 
+    // Notificar a los miembros añadidos (excepto al creador).
+    for (const [uid] of rolesPorUsuario.entries()) {
+      await notificar({
+        usuarioId: uid, actorId: userId, tipo: 'NUEVO_PROYECTO',
+        mensaje: `Te han añadido al proyecto «${project.nombre}»`,
+      });
+    }
+
     res.status(201).json(project);
   } catch (error) {
     console.error(error);
@@ -149,26 +139,19 @@ const createProject = async (req, res) => {
 
 const updateProject = async (req, res) => {
   try {
-    const { id } = req.params;
-    const { userId, rolId } = req.user;
-    const projectId = parseInt(id);
-
-    const project = await prisma.proyecto.findUnique({ where: { id: projectId } });
-    if (!project) return res.status(404).json({ error: 'Proyecto no encontrado' });
-
-    const myRole = await rolEnProyecto(userId, rolId, project);
-    if (myRole !== 'JEFE_EQUIPO' && myRole !== 'JEFE_PROYECTO') {
+    // req.project y req.myProjectRole vienen de requireProjectAccess.
+    if (!ROLES_GESTION.includes(req.myProjectRole)) {
       return res.status(403).json({ error: 'No tienes permisos para editar este proyecto' });
     }
 
-    // Solo permitimos editar estos campos por aquí.
+    // Solo permitimos editar estos campos por aquí (ya validados por zod).
     const { nombre, descripcion, estado } = req.body;
     const data = {};
     if (nombre !== undefined) data.nombre = nombre;
     if (descripcion !== undefined) data.descripcion = descripcion;
     if (estado !== undefined) data.estado = estado;
 
-    const updated = await prisma.proyecto.update({ where: { id: projectId }, data });
+    const updated = await prisma.proyecto.update({ where: { id: req.project.id }, data });
     res.json(updated);
   } catch (error) {
     console.error(error);
@@ -178,19 +161,11 @@ const updateProject = async (req, res) => {
 
 const deleteProject = async (req, res) => {
   try {
-    const { id } = req.params;
-    const { userId, rolId } = req.user;
-    const projectId = parseInt(id);
-
-    const project = await prisma.proyecto.findUnique({ where: { id: projectId } });
-    if (!project) return res.status(404).json({ error: 'Proyecto no encontrado' });
-
-    const myRole = await rolEnProyecto(userId, rolId, project);
-    if (myRole !== 'JEFE_EQUIPO' && myRole !== 'JEFE_PROYECTO') {
+    if (!ROLES_GESTION.includes(req.myProjectRole)) {
       return res.status(403).json({ error: 'No tienes permisos para eliminar este proyecto' });
     }
 
-    await prisma.proyecto.delete({ where: { id: projectId } });
+    await prisma.proyecto.delete({ where: { id: req.project.id } });
     res.json({ message: 'Proyecto eliminado' });
   } catch (error) {
     console.error(error);
@@ -200,27 +175,21 @@ const deleteProject = async (req, res) => {
 
 /* ── Gestión de miembros del proyecto (solo jefe de equipo / jefe de proyecto) ── */
 
-async function ensureCanManageMembers(req, res, projectId) {
-  const { userId, rolId } = req.user;
-  const project = await prisma.proyecto.findUnique({ where: { id: projectId } });
-  if (!project) {
-    res.status(404).json({ error: 'Proyecto no encontrado' });
-    return null;
-  }
-  const myRole = await rolEnProyecto(userId, rolId, project);
-  if (myRole !== 'JEFE_EQUIPO' && myRole !== 'JEFE_PROYECTO') {
+// req.project / req.myProjectRole los provee requireProjectAccess. Devuelve true si puede gestionar.
+function ensureCanManageMembers(req, res) {
+  if (!ROLES_GESTION.includes(req.myProjectRole)) {
     res.status(403).json({ error: 'Solo el jefe de equipo o el jefe de proyecto pueden gestionar miembros' });
-    return null;
+    return false;
   }
-  return project;
+  return true;
 }
 
 // POST /projects/:id/miembros  { usuarioId, rol }
 const addProjectMember = async (req, res) => {
   try {
-    const projectId = parseInt(req.params.id);
-    const project = await ensureCanManageMembers(req, res, projectId);
-    if (!project) return;
+    const projectId = req.project.id;
+    const project = req.project;
+    if (!ensureCanManageMembers(req, res)) return;
 
     const usuarioId = parseInt(req.body.usuarioId);
     const rol = ROLES_PROYECTO.includes(req.body.rol) ? req.body.rol : 'TRABAJADOR';
@@ -254,6 +223,11 @@ const addProjectMember = async (req, res) => {
       detalles: `añadió a ${nuevoMiembro?.nombre || 'un miembro'} al proyecto «${project.nombre}»`,
     });
 
+    await notificar({
+      usuarioId, actorId: req.user.userId, tipo: 'NUEVO_PROYECTO',
+      mensaje: `Te han añadido al proyecto «${project.nombre}»`,
+    });
+
     res.json(result);
   } catch (error) {
     console.error(error);
@@ -264,9 +238,8 @@ const addProjectMember = async (req, res) => {
 // PUT /projects/:id/miembros/:userId  { rol }
 const updateProjectMember = async (req, res) => {
   try {
-    const projectId = parseInt(req.params.id);
-    const project = await ensureCanManageMembers(req, res, projectId);
-    if (!project) return;
+    const projectId = req.project.id;
+    if (!ensureCanManageMembers(req, res)) return;
 
     const targetUserId = parseInt(req.params.userId);
     const rol = req.body.rol;
@@ -293,9 +266,9 @@ const updateProjectMember = async (req, res) => {
 // DELETE /projects/:id/miembros/:userId
 const removeProjectMember = async (req, res) => {
   try {
-    const projectId = parseInt(req.params.id);
-    const project = await ensureCanManageMembers(req, res, projectId);
-    if (!project) return;
+    const projectId = req.project.id;
+    const project = req.project;
+    if (!ensureCanManageMembers(req, res)) return;
 
     const targetUserId = parseInt(req.params.userId);
     if (targetUserId === project.liderId) {

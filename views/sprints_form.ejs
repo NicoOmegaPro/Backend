@@ -10,6 +10,18 @@
       <input type="text" name="nombre" value="<%= sprint ? sprint.nombre : '' %>" required>
     </div>
     <div class="f">
+      <label>Objetivo</label>
+      <textarea name="objetivo" rows="2"><%= sprint ? (sprint.objetivo || '') : '' %></textarea>
+    </div>
+    <div class="f">
+      <label>Estado</label>
+      <select name="estado">
+        <% ['PLANIFICADO','ACTIVO','COMPLETADO'].forEach(e => { %>
+        <option value="<%= e %>" <%= sprint && sprint.estado === e ? 'selected' : '' %>><%= e %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="f">
       <label>Proyecto</label>
       <select name="proyectoId" required>
         <option value="">-- Selecciona un proyecto --</option>

@@ -19,13 +19,12 @@ const authenticate = (req, res, next) => {
   }
 };
 
-const authorize = (...roles) => (req, res, next) => {
-  const ROLES = { ADMINISTRADOR: 1, JEFE_PROYECTO: 2, SUPERVISOR: 3, TRABAJADOR: 4 };
-  const allowedIds = roles.map(r => ROLES[r]).filter(Boolean);
-  if (!allowedIds.includes(req.user.rolId)) {
-    return res.status(403).json({ error: 'No tienes permisos para esta acción' });
+// Restringe a administradores globales (rolId === 1).
+const soloAdmin = (req, res, next) => {
+  if (req.user?.rolId !== 1) {
+    return res.status(403).json({ error: 'Solo el administrador global puede realizar esta acción' });
   }
   next();
 };
 
-module.exports = { authenticate, authorize };
+module.exports = { authenticate, soloAdmin };

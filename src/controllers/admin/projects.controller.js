@@ -1,11 +1,21 @@
 const prisma = require('../../prisma');
+const { getPageParams, buildMeta } = require('../../utils/paginate');
 
 const index = async (req, res) => {
-  const projects = await prisma.proyecto.findMany({
-    include: { equipo: { select: { nombre: true } }, lider: { select: { nombre: true } } },
-    orderBy: { id: 'asc' }
-  });
-  res.render('projects', { projects, title: 'Proyectos', active: 'projects' });
+  const { page, limit, skip } = getPageParams(req);
+  const [projects, total] = await Promise.all([
+    prisma.proyecto.findMany({
+      include: {
+        equipo: { select: { nombre: true } },
+        lider: { select: { nombre: true } },
+        _count: { select: { tareas: true, miembros: true } },
+      },
+      orderBy: { id: 'asc' },
+      skip, take: limit,
+    }),
+    prisma.proyecto.count(),
+  ]);
+  res.render('projects', { projects, title: 'Proyectos', active: 'projects', pagination: buildMeta({ page, limit, total }) });
 };
 
 const create = async (req, res) => {

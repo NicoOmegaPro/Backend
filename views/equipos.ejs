@@ -7,7 +7,7 @@
   <div class="tw">
     <table class="dt">
       <thead>
-        <tr><th>ID</th><th>Nombre</th><th>Descripción</th><th>Miembros</th><th></th></tr>
+        <tr><th>ID</th><th>Nombre</th><th>Descripción</th><th>Miembros</th><th>Proyectos</th><th></th></tr>
       </thead>
       <tbody>
         <% equipos.forEach(e => { %>
@@ -16,6 +16,7 @@
           <td><strong><%= e.nombre %></strong></td>
           <td class="cm"><%= e.descripcion || '-' %></td>
           <td><span class="tg tg-purple"><%= e._count.usuarios %></span></td>
+          <td><span class="tg tg-blue"><%= e._count?.proyectos ?? 0 %></span></td>
           <td class="ca">
             <a href="/admin/equipos/<%= e.id %>/edit" class="ib ib-e"><i class="bi bi-pencil"></i></a>
             <form action="/admin/equipos/<%= e.id %>/delete" method="POST" style="display:inline" onsubmit="return confirm('¿Eliminar equipo?')">
@@ -24,9 +25,10 @@
           </td>
         </tr>
         <% }) %>
-        <% if (!equipos.length) { %><tr class="erow"><td colspan="5">Sin registros</td></tr><% } %>
+        <% if (!equipos.length) { %><tr class="erow"><td colspan="6">Sin registros</td></tr><% } %>
       </tbody>
     </table>
   </div>
 </div>
+<%- include('_pagination') %>
 <%- include('_footer') %>
