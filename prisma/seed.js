@@ -20,6 +20,13 @@ const { createRandomHistorial } = require('./factories/historialFactory');
 const prisma = new PrismaClient();
 
 async function main() {
+  // Evitar duplicados si la base de datos ya tiene datos sembrados
+  const userCount = await prisma.usuario.count();
+  if (userCount > 1) {
+    console.log('La base de datos ya contiene datos (seeding ya realizado). Omitiendo seeding para evitar duplicados.');
+    return;
+  }
+
   console.log('Iniciando Database Seeding...');
 
   // 1. Admin global (seeder manual)
