@@ -4,7 +4,6 @@ const ESTADOS_TAREA = ['PENDIENTE', 'EN_PROGRESO', 'EN_REVISION', 'FINALIZADO'];
 const PRIORIDADES = ['BAJA', 'MEDIA', 'ALTA', 'URGENTE'];
 const ESTADOS_PROYECTO = ['ACTIVO', 'COMPLETADO', 'ARCHIVADO'];
 const ESTADOS_SPRINT = ['PLANIFICADO', 'ACTIVO', 'COMPLETADO'];
-const ROLES_PROYECTO = ['JEFE_PROYECTO', 'SUPERVISOR', 'TRABAJADOR'];
 
 // Acepta string ISO, Date o null/'' → Date | null
 const fechaOpcional = z
@@ -67,14 +66,6 @@ const createProjectSchema = z.object({
   nombre: z.string().trim().min(1, 'El nombre es obligatorio').max(120),
   descripcion: z.string().trim().max(2000).optional().nullable(),
   equipoId: z.union([z.number(), z.string()]).transform((v) => parseInt(v)),
-  miembros: z
-    .array(
-      z.object({
-        usuarioId: z.union([z.number(), z.string()]).transform((v) => parseInt(v)),
-        rol: z.enum(ROLES_PROYECTO).optional(),
-      })
-    )
-    .optional(),
 });
 
 const updateProjectSchema = z
@@ -84,15 +75,6 @@ const updateProjectSchema = z
     estado: z.enum(ESTADOS_PROYECTO).optional(),
   })
   .refine((d) => Object.keys(d).length > 0, { message: 'No hay campos que actualizar' });
-
-const projectMemberSchema = z.object({
-  usuarioId: z.union([z.number(), z.string()]).transform((v) => parseInt(v)),
-  rol: z.enum(ROLES_PROYECTO).optional(),
-});
-
-const updateProjectMemberSchema = z.object({
-  rol: z.enum(ROLES_PROYECTO),
-});
 
 /* ───────────── Sprints ───────────── */
 const createSprintSchema = z.object({
@@ -150,8 +132,6 @@ module.exports = {
   updateTaskSchema,
   createProjectSchema,
   updateProjectSchema,
-  projectMemberSchema,
-  updateProjectMemberSchema,
   createSprintSchema,
   updateSprintSchema,
   createSubtareaSchema,

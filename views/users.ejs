@@ -7,7 +7,7 @@
   <div class="tw">
     <table class="dt">
       <thead>
-        <tr><th>ID</th><th>Nombre</th><th>Email</th><th>Rol</th><th>Descripción</th><th></th></tr>
+        <tr><th>ID</th><th>Nombre</th><th>Email</th><th>Admin</th><th>Descripción</th><th></th></tr>
       </thead>
       <tbody>
         <% users.forEach(u => { %>
@@ -15,7 +15,7 @@
           <td class="ci"><%= u.id %></td>
           <td><strong><%= u.nombre %></strong></td>
           <td class="cm"><%= u.email %></td>
-          <td><span class="tg tg-slate"><%= u.rol?.nombre || '-' %></span></td>
+          <td><span class="tg <%= u.esAdmin ? 'tg-purple' : 'tg-slate' %>"><%= u.esAdmin ? 'Sí' : 'No' %></span></td>
           <td class="cm"><%= u.descripcion || '-' %></td>
           <td class="ca">
             <a href="/admin/users/<%= u.id %>/edit" class="ib ib-e"><i class="bi bi-pencil"></i></a>

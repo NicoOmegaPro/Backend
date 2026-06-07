@@ -8,7 +8,7 @@ const index = async (req, res) => {
       include: {
         equipo: { select: { nombre: true } },
         lider: { select: { nombre: true } },
-        _count: { select: { tareas: true, miembros: true } },
+        _count: { select: { tareas: true } },
       },
       orderBy: { id: 'asc' },
       skip, take: limit,

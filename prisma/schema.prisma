@@ -7,13 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Rol {
-  id          Int       @id @default(autoincrement())
-  nombre      String    @unique // Ej: ADMINISTRADOR, JEFE_PROYECTO, SUPERVISOR, TRABAJADOR
-  descripcion String?
-  usuarios    Usuario[]
-}
-
 model Usuario {
   id                  Int                  @id @default(autoincrement())
   nombre              String
@@ -21,10 +14,8 @@ model Usuario {
   password            String
   descripcion         String?
   imagenPerfil        String?              // Ruta local
-  rolId               Int?                 // Opcional: solo lo usa el Administrador global. Los usuarios normales no tienen rol global.
-  rol                 Rol?                 @relation(fields: [rolId], references: [id])
+  esAdmin             Boolean              @default(false) // Admin global: acceso total. El resto de roles son por equipo.
   equipos             EquipoUsuario[]
-  proyectos           ProyectoUsuario[]
   tareasAsignadas     Tarea[]              @relation("AsignadoA")
   comentarios         Comentario[]
   adjuntos            Adjunto[]
@@ -37,6 +28,7 @@ model Equipo {
   id          Int             @id @default(autoincrement())
   nombre      String
   descripcion String?
+  imagen      String?         // Ruta local de la imagen/avatar del equipo
   usuarios    EquipoUsuario[]
   proyectos   Proyecto[]
 }
@@ -44,7 +36,7 @@ model Equipo {
 model EquipoUsuario {
   usuarioId Int
   equipoId  Int
-  rol       String  @default("MIEMBRO")    // JEFE_EQUIPO | MIEMBRO (el rango de proyecto se asigna por proyecto en ProyectoUsuario)
+  rol       String  @default("MIEMBRO")    // JEFE_EQUIPO | SUPERVISOR | MIEMBRO (único nivel de rol)
   estado    String  @default("ACEPTADO")   // PENDIENTE | ACEPTADO | RECHAZADO
   usuario   Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
   equipo    Equipo  @relation(fields: [equipoId], references: [id], onDelete: Cascade)
@@ -61,22 +53,10 @@ model Proyecto {
   equipo      Equipo?   @relation(fields: [equipoId], references: [id])
   liderId     Int?
   lider       Usuario?  @relation("LiderProyecto", fields: [liderId], references: [id])
-  miembros    ProyectoUsuario[]
   tareas      Tarea[]
   sprints     Sprint[]
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @default(now()) @updatedAt
-}
-
-// Rol específico de cada miembro dentro de un proyecto concreto.
-model ProyectoUsuario {
-  proyectoId Int
-  usuarioId  Int
-  rol        String   @default("TRABAJADOR") // JEFE_PROYECTO | SUPERVISOR | TRABAJADOR
-  proyecto   Proyecto @relation(fields: [proyectoId], references: [id], onDelete: Cascade)
-  usuario    Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
-
-  @@id([proyectoId, usuarioId])
 }
 
 model Sprint {

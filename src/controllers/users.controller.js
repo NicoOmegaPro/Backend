@@ -4,10 +4,10 @@ const { getPageParams, buildMeta } = require('../utils/paginate');
 
 const getAllUsers = async (req, res) => {
   try {
-    const { userId, rolId } = req.user;
+    const { userId, esAdmin } = req.user;
 
     let where = {};
-    if (rolId !== 1) {
+    if (!esAdmin) {
       // Si el usuario es JEFE_EQUIPO de algún equipo, puede ver a todos (para invitar)
       const isTeamLeader = await prisma.equipoUsuario.findFirst({
         where: { usuarioId: userId, rol: 'JEFE_EQUIPO', estado: 'ACEPTADO' },
@@ -46,7 +46,7 @@ const getAllUsers = async (req, res) => {
       email: true,
       descripcion: true,
       imagenPerfil: true,
-      rol: true,
+      esAdmin: true,
     };
 
     // Compatibilidad: solo paginamos si llega ?page. Sin él, devolvemos el array
@@ -79,8 +79,7 @@ const getUserById = async (req, res) => {
         email: true,
         descripcion: true,
         imagenPerfil: true,
-        rolId: true,
-        rol: true,
+        esAdmin: true,
         equipos: {
           where: { estado: 'ACEPTADO' },
           include: {
@@ -142,7 +141,7 @@ const uploadAvatar = async (req, res) => {
     const user = await prisma.usuario.update({
       where: { id: parseInt(id) },
       data: { imagenPerfil },
-      select: { id: true, nombre: true, email: true, imagenPerfil: true, rolId: true },
+      select: { id: true, nombre: true, email: true, imagenPerfil: true, esAdmin: true },
     });
     res.json(user);
   } catch (error) {

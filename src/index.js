@@ -8,7 +8,6 @@ const authRoutes = require('./routes/auth.routes');
 const usersRoutes = require('./routes/users.routes');
 const projectsRoutes = require('./routes/projects.routes');
 const tasksRoutes = require('./routes/tasks.routes');
-const rolesRoutes = require('./routes/roles.routes');
 const equiposRoutes = require('./routes/equipos.routes');
 const sprintsRoutes = require('./routes/sprints.routes');
 const subtareasRoutes = require('./routes/subtareas.routes');
@@ -39,7 +38,6 @@ app.use('/api/auth', authRoutes);                                    // login/re
 app.use('/api/users', authenticate, usersRoutes);
 app.use('/api/projects', authenticate, projectsRoutes);
 app.use('/api/tasks', authenticate, tasksRoutes);
-app.use('/api/roles', authenticate, rolesRoutes);
 app.use('/api/equipos', authenticate, equiposRoutes);
 app.use('/api/sprints', authenticate, sprintsRoutes);
 app.use('/api/subtareas', authenticate, subtareasRoutes);

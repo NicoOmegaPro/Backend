@@ -19,9 +19,9 @@ const authenticate = (req, res, next) => {
   }
 };
 
-// Restringe a administradores globales (rolId === 1).
+// Restringe a administradores globales (esAdmin === true).
 const soloAdmin = (req, res, next) => {
-  if (req.user?.rolId !== 1) {
+  if (!req.user?.esAdmin) {
     return res.status(403).json({ error: 'Solo el administrador global puede realizar esta acción' });
   }
   next();

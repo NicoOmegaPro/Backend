@@ -6,16 +6,16 @@ async function createRandomUsers(prisma, count) {
   const users = [];
 
   for (let i = 0; i < count; i++) {
+    // Inyectamos el índice en el local-part para garantizar emails únicos (campo @unique).
+    const email = faker.internet.email().toLowerCase().replace('@', `${i}@`);
     const user = await prisma.usuario.create({
       data: {
         nombre: faker.person.fullName(),
-        email: faker.internet.email().toLowerCase(),
+        email,
         password: password,
         descripcion: faker.person.bio(),
-        // Sin rol global: los roles son por equipo (JEFE_EQUIPO/MIEMBRO) y por
-        // proyecto (JEFE_PROYECTO/SUPERVISOR/TRABAJADOR). El único rol global es
-        // Administrador, y solo lo tiene la cuenta admin del seeder.
-        rolId: null
+        imagenPerfil: faker.image.avatar(), // foto de retrato (URL absoluta en CDN)
+        esAdmin: false // el único admin es la cuenta del seeder; los roles van por equipo
       }
     });
     users.push(user);

@@ -69,7 +69,7 @@ const createComentario = async (req, res) => {
 const deleteComentario = async (req, res) => {
   try {
     const { id } = req.params;
-    const { userId, rolId } = req.user;
+    const { userId, esAdmin } = req.user;
 
     const comentario = await prisma.comentario.findUnique({
       where: { id: parseInt(id) },
@@ -78,7 +78,7 @@ const deleteComentario = async (req, res) => {
     if (!comentario) return res.status(404).json({ error: 'Comentario no encontrado' });
 
     const esAutor = comentario.autorId === userId;
-    const miRol = await rolEnProyecto(userId, rolId, comentario.tarea.proyecto);
+    const miRol = await rolEnProyecto(userId, esAdmin, comentario.tarea.proyecto);
     if (!esAutor && !ROLES_GESTION.includes(miRol)) {
       return res.status(403).json({ error: 'No puedes eliminar este comentario' });
     }

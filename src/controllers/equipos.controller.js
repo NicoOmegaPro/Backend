@@ -2,9 +2,8 @@ const prisma = require('../prisma');
 const { registrarActividad } = require('../utils/registrarActividad');
 const { getPageParams, buildMeta } = require('../utils/paginate');
 
-// En un equipo solo existen dos roles: el jefe de equipo y los miembros.
-// Los rangos de proyecto (Jefe de Proyecto, Supervisor, Trabajador) se asignan
-// por proyecto en el modelo ProyectoUsuario, no a nivel de equipo.
+// Único nivel de rol: el del equipo (JEFE_EQUIPO | SUPERVISOR | MIEMBRO).
+// Ese rol gobierna también los permisos en los proyectos del equipo.
 
 /* ─── helpers ─── */
 async function getMembership(usuarioId, equipoId) {
@@ -18,9 +17,9 @@ async function getMembership(usuarioId, equipoId) {
    ════════════════════════════════════════ */
 const getAllEquipos = async (req, res) => {
   try {
-    const { userId, rolId } = req.user;
+    const { userId, esAdmin } = req.user;
 
-    const where = rolId === 1
+    const where = esAdmin
       ? {}
       : { usuarios: { some: { usuarioId: userId, estado: 'ACEPTADO' } } };
 
@@ -35,7 +34,7 @@ const getAllEquipos = async (req, res) => {
     // Añadir myRol a cada equipo
     const withRol = (eq) => {
       const mem = eq.usuarios.find((u) => u.usuarioId === userId);
-      return { ...eq, myRol: rolId === 1 ? 'JEFE_EQUIPO' : (mem?.rol ?? null) };
+      return { ...eq, myRol: esAdmin ? 'JEFE_EQUIPO' : (mem?.rol ?? null) };
     };
 
     // Compatibilidad: paginamos solo si llega ?page; si no, array completo de siempre.
@@ -62,7 +61,7 @@ const getAllEquipos = async (req, res) => {
 const getEquipoById = async (req, res) => {
   try {
     const { id } = req.params;
-    const { userId, rolId } = req.user;
+    const { userId, esAdmin } = req.user;
 
     const equipo = await prisma.equipo.findUnique({
       where: { id: parseInt(id) },
@@ -76,7 +75,7 @@ const getEquipoById = async (req, res) => {
     if (!equipo) return res.status(404).json({ error: 'Equipo no encontrado' });
 
     const mem = equipo.usuarios.find((u) => u.usuarioId === userId);
-    res.json({ ...equipo, myRol: rolId === 1 ? 'JEFE_EQUIPO' : (mem?.rol ?? null) });
+    res.json({ ...equipo, myRol: esAdmin ? 'JEFE_EQUIPO' : (mem?.rol ?? null) });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Error al obtener el equipo' });
@@ -130,14 +129,14 @@ const createEquipo = async (req, res) => {
 const invitarMiembro = async (req, res) => {
   try {
     const equipoId = parseInt(req.params.id);
-    const { userId, rolId } = req.user;
+    const { userId, esAdmin } = req.user;
     const { email } = req.body;
     const rol = 'MIEMBRO'; // Los invitados entran siempre como miembros del equipo.
 
     if (!email) return res.status(400).json({ error: 'El email es obligatorio' });
 
     // Solo JEFE_EQUIPO puede invitar (o admin)
-    if (rolId !== 1) {
+    if (!esAdmin) {
       const mem = await getMembership(userId, equipoId);
       if (!mem || mem.rol !== 'JEFE_EQUIPO' || mem.estado !== 'ACEPTADO') {
         return res.status(403).json({ error: 'Solo el jefe de equipo puede invitar miembros' });
@@ -287,16 +286,58 @@ const rechazarInvitacion = async (req, res) => {
 };
 
 /* ══════════════════════════════════════════════════════
+   PUT /equipos/:id/miembros/:userId/rol   Body: { rol }
+   Cambia el rol de un miembro (solo jefe de equipo o admin).
+   ══════════════════════════════════════════════════════ */
+const ROLES_ASIGNABLES = ['SUPERVISOR', 'MIEMBRO'];
+const cambiarRolMiembro = async (req, res) => {
+  try {
+    const equipoId = parseInt(req.params.id);
+    const targetUserId = parseInt(req.params.userId);
+    const { userId, esAdmin } = req.user;
+    const rol = req.body.rol;
+
+    if (!ROLES_ASIGNABLES.includes(rol)) {
+      return res.status(400).json({ error: 'Rol no válido. Usa: SUPERVISOR o MIEMBRO' });
+    }
+
+    if (!esAdmin) {
+      const mem = await getMembership(userId, equipoId);
+      if (!mem || mem.rol !== 'JEFE_EQUIPO' || mem.estado !== 'ACEPTADO') {
+        return res.status(403).json({ error: 'Solo el jefe de equipo puede cambiar roles' });
+      }
+    }
+
+    const targetMem = await getMembership(targetUserId, equipoId);
+    if (!targetMem || targetMem.estado !== 'ACEPTADO') {
+      return res.status(404).json({ error: 'El usuario no es miembro del equipo' });
+    }
+    if (targetMem.rol === 'JEFE_EQUIPO') {
+      return res.status(400).json({ error: 'No puedes cambiar el rol del jefe de equipo' });
+    }
+
+    const updated = await prisma.equipoUsuario.update({
+      where: { usuarioId_equipoId: { usuarioId: targetUserId, equipoId } },
+      data: { rol },
+    });
+    res.json(updated);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al cambiar el rol del miembro' });
+  }
+};
+
+/* ══════════════════════════════════════════════════════
    DELETE /equipos/:id/miembros/:userId
    ══════════════════════════════════════════════════════ */
 const expulsarMiembro = async (req, res) => {
   try {
     const equipoId = parseInt(req.params.id);
     const targetUserId = parseInt(req.params.userId);
-    const { userId, rolId } = req.user;
+    const { userId, esAdmin } = req.user;
 
     // Solo JEFE_EQUIPO puede expulsar
-    if (rolId !== 1) {
+    if (!esAdmin) {
       const mem = await getMembership(userId, equipoId);
       if (!mem || mem.rol !== 'JEFE_EQUIPO') {
         return res.status(403).json({ error: 'Solo el jefe de equipo puede expulsar miembros' });
@@ -328,18 +369,22 @@ const expulsarMiembro = async (req, res) => {
 const updateEquipo = async (req, res) => {
   try {
     const { id } = req.params;
-    const { userId, rolId } = req.user;
+    const { userId, esAdmin } = req.user;
     const equipoId = parseInt(id);
 
-    if (rolId !== 1) {
+    if (!esAdmin) {
       const mem = await getMembership(userId, equipoId);
       if (!mem || mem.rol !== 'JEFE_EQUIPO') {
         return res.status(403).json({ error: 'Solo el jefe de equipo puede editar el equipo' });
       }
     }
 
-    const { nombre, descripcion } = req.body;
-    const equipo = await prisma.equipo.update({ where: { id: equipoId }, data: { nombre, descripcion } });
+    const { nombre, descripcion, imagen } = req.body;
+    const data = {};
+    if (nombre !== undefined) data.nombre = nombre;
+    if (descripcion !== undefined) data.descripcion = descripcion;
+    if (imagen !== undefined) data.imagen = imagen;
+    const equipo = await prisma.equipo.update({ where: { id: equipoId }, data });
     res.json(equipo);
   } catch (error) {
     console.error(error);
@@ -347,13 +392,40 @@ const updateEquipo = async (req, res) => {
   }
 };
 
+/* ══════════════════════════════════════════════════════
+   POST /equipos/:id/imagen   (multipart: image)
+   Sube/actualiza la imagen del equipo (solo jefe de equipo o admin).
+   ══════════════════════════════════════════════════════ */
+const uploadImagenEquipo = async (req, res) => {
+  try {
+    const equipoId = parseInt(req.params.id);
+    const { userId, esAdmin } = req.user;
+
+    if (!esAdmin) {
+      const mem = await getMembership(userId, equipoId);
+      if (!mem || mem.rol !== 'JEFE_EQUIPO') {
+        return res.status(403).json({ error: 'Solo el jefe de equipo puede cambiar la imagen' });
+      }
+    }
+
+    if (!req.file) return res.status(400).json({ error: 'No se ha subido ninguna imagen' });
+
+    const ruta = `/uploads/${req.file.filename}`;
+    const equipo = await prisma.equipo.update({ where: { id: equipoId }, data: { imagen: ruta } });
+    res.json({ imagen: equipo.imagen });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al subir la imagen del equipo' });
+  }
+};
+
 const deleteEquipo = async (req, res) => {
   try {
     const { id } = req.params;
-    const { userId, rolId } = req.user;
+    const { userId, esAdmin } = req.user;
     const equipoId = parseInt(id);
 
-    if (rolId !== 1) {
+    if (!esAdmin) {
       const mem = await getMembership(userId, equipoId);
       if (!mem || mem.rol !== 'JEFE_EQUIPO') {
         return res.status(403).json({ error: 'Solo el jefe de equipo puede eliminar el equipo' });
@@ -377,5 +449,7 @@ module.exports = {
   invitarMiembro,
   aceptarInvitacion,
   rechazarInvitacion,
+  cambiarRolMiembro,
   expulsarMiembro,
+  uploadImagenEquipo,
 };

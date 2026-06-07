@@ -1,5 +1,4 @@
 const bcrypt = require('bcrypt');
-const { ROLES } = require('./rolesSeeder');
 
 async function runUsersSeeder(prisma) {
   console.log('Ejecutando UsersSeeder...');
@@ -8,12 +7,12 @@ async function runUsersSeeder(prisma) {
   const adminPassword = await bcrypt.hash('admin123', 10);
   const admin = await prisma.usuario.upsert({
     where: { email: 'admin@admin.com' },
-    update: {},
+    update: { esAdmin: true },
     create: {
       nombre: 'Super Administrador',
       email: 'admin@admin.com',
       password: adminPassword,
-      rolId: ROLES.ADMINISTRADOR // Usamos el ID exportado desde rolesSeeder
+      esAdmin: true
     }
   });
 

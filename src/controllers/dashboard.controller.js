@@ -1,37 +1,29 @@
 const prisma = require('../prisma');
 
 // Devuelve los IDs de proyectos a los que el usuario tiene acceso (o null = todos, para admin).
-async function getAccessibleProjectIds(userId, rolId) {
-  if (rolId === 1) return null; // admin: todos
+async function getAccessibleProjectIds(userId, esAdmin) {
+  if (esAdmin) return null; // admin: todos
 
-  const [memberships, projectMemberships] = await Promise.all([
-    prisma.equipoUsuario.findMany({
-      where: { usuarioId: userId, estado: 'ACEPTADO' },
-      select: { equipoId: true },
-    }),
-    prisma.proyectoUsuario.findMany({
-      where: { usuarioId: userId },
-      select: { proyectoId: true },
-    }),
-  ]);
+  // El acceso a proyectos sale solo de la pertenencia a equipos (un único nivel de rol).
+  const memberships = await prisma.equipoUsuario.findMany({
+    where: { usuarioId: userId, estado: 'ACEPTADO' },
+    select: { equipoId: true },
+  });
   const teamIds = memberships.map((m) => m.equipoId);
+  if (!teamIds.length) return [];
 
-  const proyectosEquipo = teamIds.length
-    ? await prisma.proyecto.findMany({ where: { equipoId: { in: teamIds } }, select: { id: true } })
-    : [];
-
-  const ids = new Set([
-    ...proyectosEquipo.map((p) => p.id),
-    ...projectMemberships.map((m) => m.proyectoId),
-  ]);
-  return [...ids];
+  const proyectos = await prisma.proyecto.findMany({
+    where: { equipoId: { in: teamIds } },
+    select: { id: true },
+  });
+  return proyectos.map((p) => p.id);
 }
 
 // GET /dashboard  → métricas para el usuario autenticado
 const getDashboard = async (req, res) => {
   try {
-    const { userId, rolId } = req.user;
-    const projectIds = await getAccessibleProjectIds(userId, rolId);
+    const { userId, esAdmin } = req.user;
+    const projectIds = await getAccessibleProjectIds(userId, esAdmin);
     const scope = projectIds === null ? {} : { proyectoId: { in: projectIds } };
 
     const ahora = new Date();

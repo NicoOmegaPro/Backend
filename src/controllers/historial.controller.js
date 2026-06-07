@@ -3,12 +3,12 @@ const prisma = require('../prisma');
 // GET /historial?page=&limit=
 const getAllHistorial = async (req, res) => {
   try {
-    const { userId, rolId } = req.user;
+    const { userId, esAdmin } = req.user;
     const page = Math.max(1, parseInt(req.query.page) || 1);
     const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 30));
 
     let where = {};
-    if (rolId !== 1) {
+    if (!esAdmin) {
       const myMemberships = await prisma.equipoUsuario.findMany({
         where: { usuarioId: userId },
         select: { equipoId: true },

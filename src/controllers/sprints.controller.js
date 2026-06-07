@@ -11,8 +11,8 @@ const getAllSprints = async (req, res) => {
     const project = await prisma.proyecto.findUnique({ where: { id: parseInt(proyectoId) } });
     if (!project) return res.status(404).json({ error: 'Proyecto no encontrado' });
 
-    const { userId, rolId } = req.user;
-    if (!(await canAccessProject(userId, rolId, project))) {
+    const { userId, esAdmin } = req.user;
+    if (!(await canAccessProject(userId, esAdmin, project))) {
       return res.status(403).json({ error: 'No tienes acceso a este proyecto' });
     }
 
@@ -36,8 +36,8 @@ const getSprintById = async (req, res) => {
     });
     if (!sprint) return res.status(404).json({ error: 'Sprint no encontrado' });
 
-    const { userId, rolId } = req.user;
-    if (!(await canAccessProject(userId, rolId, sprint.proyecto))) {
+    const { userId, esAdmin } = req.user;
+    if (!(await canAccessProject(userId, esAdmin, sprint.proyecto))) {
       return res.status(403).json({ error: 'No tienes acceso a este sprint' });
     }
     res.json(sprint);
@@ -88,8 +88,8 @@ async function loadSprintGestion(req, res) {
     res.status(404).json({ error: 'Sprint no encontrado' });
     return null;
   }
-  const { userId, rolId } = req.user;
-  const miRol = await rolEnProyecto(userId, rolId, sprint.proyecto);
+  const { userId, esAdmin } = req.user;
+  const miRol = await rolEnProyecto(userId, esAdmin, sprint.proyecto);
   if (!ROLES_GESTION.includes(miRol)) {
     res.status(403).json({ error: 'Solo los jefes pueden modificar sprints' });
     return null;

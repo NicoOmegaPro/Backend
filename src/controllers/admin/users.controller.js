@@ -2,41 +2,40 @@ const prisma = require('../../prisma');
 const bcrypt = require('bcrypt');
 const { getPageParams, buildMeta } = require('../../utils/paginate');
 
+// Convierte el valor del checkbox/textarea del form a booleano.
+const toBool = (v) => ['on', 'true', '1', true].includes(v);
+
 const index = async (req, res) => {
   const { page, limit, skip } = getPageParams(req);
   const [users, total] = await Promise.all([
-    prisma.usuario.findMany({ include: { rol: true }, orderBy: { id: 'asc' }, skip, take: limit }),
+    prisma.usuario.findMany({ orderBy: { id: 'asc' }, skip, take: limit }),
     prisma.usuario.count(),
   ]);
   res.render('users', { users, title: 'Usuarios', active: 'users', pagination: buildMeta({ page, limit, total }) });
 };
 
 const create = async (req, res) => {
-  const roles = await prisma.rol.findMany();
-  res.render('users_form', { user: null, roles, title: 'Nuevo Usuario', active: 'users' });
+  res.render('users_form', { user: null, title: 'Nuevo Usuario', active: 'users' });
 };
 
 const store = async (req, res) => {
   try {
-    const { nombre, email, password, descripcion, rolId } = req.body;
+    const { nombre, email, password, descripcion, esAdmin } = req.body;
     const hash = await bcrypt.hash(password, 10);
-    await prisma.usuario.create({ data: { nombre, email, password: hash, descripcion, rolId: parseInt(rolId) } });
+    await prisma.usuario.create({ data: { nombre, email, password: hash, descripcion, esAdmin: toBool(esAdmin) } });
   } catch (err) { console.error(err); }
   res.redirect('/admin/users');
 };
 
 const edit = async (req, res) => {
-  const [user, roles] = await Promise.all([
-    prisma.usuario.findUnique({ where: { id: parseInt(req.params.id) } }),
-    prisma.rol.findMany()
-  ]);
-  res.render('users_form', { user, roles, title: 'Editar Usuario', active: 'users' });
+  const user = await prisma.usuario.findUnique({ where: { id: parseInt(req.params.id) } });
+  res.render('users_form', { user, title: 'Editar Usuario', active: 'users' });
 };
 
 const update = async (req, res) => {
   try {
-    const { nombre, email, descripcion, rolId } = req.body;
-    await prisma.usuario.update({ where: { id: parseInt(req.params.id) }, data: { nombre, email, descripcion, rolId: parseInt(rolId) } });
+    const { nombre, email, descripcion, esAdmin } = req.body;
+    await prisma.usuario.update({ where: { id: parseInt(req.params.id) }, data: { nombre, email, descripcion, esAdmin: toBool(esAdmin) } });
   } catch (err) { console.error(err); }
   res.redirect('/admin/users');
 };

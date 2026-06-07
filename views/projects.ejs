@@ -7,7 +7,7 @@
   <div class="tw">
     <table class="dt">
       <thead>
-        <tr><th>ID</th><th>Nombre</th><th>Estado</th><th>Equipo</th><th>Líder</th><th>Tareas</th><th>Miembros</th><th></th></tr>
+        <tr><th>ID</th><th>Nombre</th><th>Estado</th><th>Equipo</th><th>Líder</th><th>Tareas</th><th></th></tr>
       </thead>
       <tbody>
         <% const estadoCls = { ACTIVO:'tg-green', COMPLETADO:'tg-blue', ARCHIVADO:'tg-slate' }; %>
@@ -19,7 +19,6 @@
           <td class="cm"><%= p.equipo?.nombre || '-' %></td>
           <td class="cm"><%= p.lider?.nombre || '-' %></td>
           <td><span class="tg tg-blue"><%= p._count?.tareas ?? 0 %></span></td>
-          <td><span class="tg tg-purple"><%= p._count?.miembros ?? 0 %></span></td>
           <td class="ca">
             <a href="/admin/projects/<%= p.id %>/edit" class="ib ib-e"><i class="bi bi-pencil"></i></a>
             <form action="/admin/projects/<%= p.id %>/delete" method="POST" style="display:inline" onsubmit="return confirm('¿Eliminar proyecto?')">

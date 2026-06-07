@@ -9,19 +9,14 @@ const ESTADO_LABEL = {
   FINALIZADO: 'Finalizado',
 };
 
-// ¿Puede el usuario finalizar tareas del proyecto? (jefe de equipo, jefe de proyecto o supervisor)
-async function puedeFinalizarTareas(userId, rolId, proyecto) {
-  if (rolId === 1) return true;
-  if (proyecto?.equipoId) {
-    const mem = await prisma.equipoUsuario.findUnique({
-      where: { usuarioId_equipoId: { usuarioId: userId, equipoId: proyecto.equipoId } },
-    });
-    if (mem?.rol === 'JEFE_EQUIPO' && mem.estado === 'ACEPTADO') return true;
-  }
-  const miembroProyecto = await prisma.proyectoUsuario.findUnique({
-    where: { proyectoId_usuarioId: { proyectoId: proyecto.id, usuarioId: userId } },
+// ¿Puede el usuario finalizar/eliminar tareas del proyecto? (jefe de equipo o supervisor)
+async function puedeFinalizarTareas(userId, esAdmin, proyecto) {
+  if (esAdmin) return true;
+  if (!proyecto?.equipoId) return false;
+  const mem = await prisma.equipoUsuario.findUnique({
+    where: { usuarioId_equipoId: { usuarioId: userId, equipoId: proyecto.equipoId } },
   });
-  return ['JEFE_PROYECTO', 'SUPERVISOR'].includes(miembroProyecto?.rol);
+  return mem?.estado === 'ACEPTADO' && ['JEFE_EQUIPO', 'SUPERVISOR'].includes(mem.rol);
 }
 
 /* ───────────────────────────────────────────────────────────
@@ -31,13 +26,13 @@ async function puedeFinalizarTareas(userId, rolId, proyecto) {
    ─────────────────────────────────────────────────────────── */
 const getAllTasks = async (req, res) => {
   try {
-    const { userId, rolId } = req.user;
+    const { userId, esAdmin } = req.user;
     const { proyectoId, estado, prioridad, asignadoAId, sprintId, q, vencidas } = req.query;
 
     const and = [];
 
     // Ámbito: el admin ve todo; el resto solo tareas de proyectos de sus equipos o donde participa.
-    if (rolId !== 1) {
+    if (!esAdmin) {
       const memberships = await prisma.equipoUsuario.findMany({
         where: { usuarioId: userId, estado: 'ACEPTADO' },
         select: { equipoId: true },
@@ -74,7 +69,8 @@ const getAllTasks = async (req, res) => {
       where: and.length ? { AND: and } : {},
       include: {
         proyecto: { select: { id: true, nombre: true } },
-        asignadoA: { select: { id: true, nombre: true, email: true } },
+        asignadoA: { select: { id: true, nombre: true, email: true, imagenPerfil: true } },
+        etiquetas: { include: { etiqueta: true } },
         _count: { select: { subtareas: true, comentarios: true, adjuntos: true } },
       },
       orderBy: [{ orden: 'asc' }, { id: 'asc' }],
@@ -140,7 +136,7 @@ const createTask = async (req, res) => {
       },
       include: {
         proyecto: { select: { id: true, nombre: true } },
-        asignadoA: { select: { id: true, nombre: true, email: true } },
+        asignadoA: { select: { id: true, nombre: true, email: true, imagenPerfil: true } },
       },
     });
 
@@ -171,13 +167,13 @@ const createTask = async (req, res) => {
 
 const updateTask = async (req, res) => {
   try {
-    const { userId, rolId } = req.user;
+    const { userId, esAdmin } = req.user;
     const prev = req.task; // estado anterior, cargado por el middleware
     const data = req.body;
 
     // Permiso para FINALIZAR: solo jefe de equipo, jefe de proyecto o supervisor.
     if (data.estado === 'FINALIZADO' && prev.estado !== 'FINALIZADO') {
-      if (!(await puedeFinalizarTareas(userId, rolId, req.project))) {
+      if (!(await puedeFinalizarTareas(userId, esAdmin, req.project))) {
         return res.status(403).json({
           error: 'Solo supervisores y jefes pueden finalizar tareas. Márcala como "En revisión" para que la revisen.',
         });
@@ -189,7 +185,7 @@ const updateTask = async (req, res) => {
       data,
       include: {
         proyecto: { select: { id: true, nombre: true } },
-        asignadoA: { select: { id: true, nombre: true, email: true } },
+        asignadoA: { select: { id: true, nombre: true, email: true, imagenPerfil: true } },
       },
     });
 
@@ -252,10 +248,10 @@ const reorderTasks = async (req, res) => {
 
 const deleteTask = async (req, res) => {
   try {
-    const { userId, rolId } = req.user;
+    const { userId, esAdmin } = req.user;
 
     // Solo jefes/supervisores pueden eliminar tareas.
-    if (!(await puedeFinalizarTareas(userId, rolId, req.project))) {
+    if (!(await puedeFinalizarTareas(userId, esAdmin, req.project))) {
       return res.status(403).json({ error: 'Solo supervisores y jefes pueden eliminar tareas' });
     }
 
@@ -274,6 +270,48 @@ const deleteTask = async (req, res) => {
   }
 };
 
+// POST /tasks/:id/etiquetas  { etiquetaId }  → añade una etiqueta a la tarea
+const addEtiqueta = async (req, res) => {
+  try {
+    const etiquetaId = parseInt(req.body.etiquetaId);
+    if (!etiquetaId) return res.status(400).json({ error: 'etiquetaId requerido' });
+
+    await prisma.tareaEtiqueta.upsert({
+      where: { tareaId_etiquetaId: { tareaId: req.task.id, etiquetaId } },
+      update: {},
+      create: { tareaId: req.task.id, etiquetaId },
+    });
+
+    const etiquetas = await prisma.tareaEtiqueta.findMany({
+      where: { tareaId: req.task.id },
+      include: { etiqueta: true },
+    });
+    res.json(etiquetas);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al añadir etiqueta' });
+  }
+};
+
+// DELETE /tasks/:id/etiquetas/:etiquetaId  → quita una etiqueta de la tarea
+const removeEtiqueta = async (req, res) => {
+  try {
+    const etiquetaId = parseInt(req.params.etiquetaId);
+    await prisma.tareaEtiqueta.deleteMany({
+      where: { tareaId: req.task.id, etiquetaId },
+    });
+
+    const etiquetas = await prisma.tareaEtiqueta.findMany({
+      where: { tareaId: req.task.id },
+      include: { etiqueta: true },
+    });
+    res.json(etiquetas);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al quitar etiqueta' });
+  }
+};
+
 module.exports = {
   getAllTasks,
   getTaskById,
@@ -281,4 +319,6 @@ module.exports = {
   updateTask,
   reorderTasks,
   deleteTask,
+  addEtiqueta,
+  removeEtiqueta,
 };

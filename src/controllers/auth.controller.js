@@ -49,7 +49,7 @@ const login = async (req, res) => {
 
     // Generate token
     const token = jwt.sign(
-      { id: user.id, userId: user.id, email: user.email, rolId: user.rolId },
+      { id: user.id, userId: user.id, email: user.email, esAdmin: user.esAdmin },
       process.env.JWT_SECRET,
       { expiresIn: '24h' }
     );
@@ -65,7 +65,7 @@ const me = async (req, res) => {
   try {
     const user = await prisma.usuario.findUnique({
       where: { id: req.user.userId },
-      select: { id: true, nombre: true, email: true, descripcion: true, imagenPerfil: true, rolId: true, rol: true }
+      select: { id: true, nombre: true, email: true, descripcion: true, imagenPerfil: true, esAdmin: true }
     });
     if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
     res.json(user);

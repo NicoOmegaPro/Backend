@@ -2,7 +2,6 @@ const express = require('express');
 const router = express.Router();
 
 const users       = require('../controllers/admin/users.controller');
-const roles       = require('../controllers/admin/roles.controller');
 const tasks       = require('../controllers/admin/tasks.controller');
 const projects    = require('../controllers/admin/projects.controller');
 const equipos     = require('../controllers/admin/equipos.controller');
@@ -23,14 +22,6 @@ router.post('/users',             users.store);
 router.get('/users/:id/edit',     users.edit);
 router.post('/users/:id',         users.update);
 router.post('/users/:id/delete',  users.destroy);
-
-// Roles
-router.get('/roles',              roles.index);
-router.get('/roles/create',       roles.create);
-router.post('/roles',             roles.store);
-router.get('/roles/:id/edit',     roles.edit);
-router.post('/roles/:id',         roles.update);
-router.post('/roles/:id/delete',  roles.destroy);
 
 // Tasks
 router.get('/tasks',              tasks.index);

@@ -11,8 +11,8 @@ async function loadSubtareaConAcceso(req, res) {
     res.status(404).json({ error: 'Subtarea no encontrada' });
     return null;
   }
-  const { userId, rolId } = req.user;
-  if (!(await canAccessProject(userId, rolId, subtarea.tarea.proyecto))) {
+  const { userId, esAdmin } = req.user;
+  if (!(await canAccessProject(userId, esAdmin, subtarea.tarea.proyecto))) {
     res.status(403).json({ error: 'No tienes acceso a esta subtarea' });
     return null;
   }
