@@ -2,7 +2,6 @@ const prisma = require('../prisma');
 const { notificar } = require('../utils/notificar');
 const { ROLES_GESTION, rolEnProyecto } = require('../utils/permissions');
 
-// GET /comentarios?tareaId=  → comentarios de una tarea (requiere acceso a la tarea)
 const getAllComentarios = async (req, res) => {
   try {
     const { tareaId } = req.query;
@@ -38,8 +37,6 @@ const getComentarioById = async (req, res) => {
   }
 };
 
-// POST /comentarios  { contenido, tareaId }  → autor = usuario autenticado
-// req.task viene de requireBodyTaskAccess
 const createComentario = async (req, res) => {
   try {
     const { contenido } = req.body;
@@ -50,7 +47,6 @@ const createComentario = async (req, res) => {
       include: { autor: { select: { id: true, nombre: true, email: true, imagenPerfil: true } } },
     });
 
-    // Notificar al asignado de la tarea (si no es el propio autor).
     if (req.task.asignadoAId) {
       await notificar({
         usuarioId: req.task.asignadoAId, actorId: autorId, tipo: 'COMENTARIO',
@@ -65,7 +61,6 @@ const createComentario = async (req, res) => {
   }
 };
 
-// DELETE /comentarios/:id  → solo el autor o un gestor del proyecto
 const deleteComentario = async (req, res) => {
   try {
     const { id } = req.params;

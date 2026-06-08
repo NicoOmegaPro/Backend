@@ -1,0 +1,37 @@
+<%- include('_header') %>
+<div class="ph">
+  <span class="ph-t"><%= title %></span>
+  <a href="/admin/adjuntos" class="btn btn-g"><i class="bi bi-arrow-left"></i>Volver</a>
+</div>
+<div class="fc">
+  <form action="<%= adjunto ? '/admin/adjuntos/' + adjunto.id : '/admin/adjuntos' %>" method="POST">
+    <div class="f">
+      <label>Nombre</label>
+      <input type="text" name="nombre" value="<%= adjunto ? adjunto.nombre : '' %>" required>
+    </div>
+    <div class="f">
+      <label>Ruta / URL</label>
+      <input type="text" name="rutaLocal" value="<%= adjunto ? adjunto.rutaLocal : '' %>" placeholder="/uploads/… o https://…" required>
+    </div>
+    <div class="f">
+      <label>Tarea</label>
+      <select name="tareaId" required>
+        <% tareas.forEach(t => { %>
+          <option value="<%= t.id %>" <%= adjunto && adjunto.tareaId === t.id ? 'selected' : '' %>>#<%= t.id %> — <%= t.titulo %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="f">
+      <label>Subido por</label>
+      <select name="subidoPor" required>
+        <% usuarios.forEach(u => { %>
+          <option value="<%= u.id %>" <%= adjunto && adjunto.subidoPor === u.id ? 'selected' : '' %>><%= u.nombre %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="fa">
+      <button type="submit" class="btn btn-p"><i class="bi bi-floppy"></i>Guardar</button>
+    </div>
+  </form>
+</div>
+<%- include('_footer') %>

@@ -1,6 +1,9 @@
 const prisma = require('../../prisma');
 const { getPageParams, buildMeta } = require('../../utils/paginate');
 
+const ROLES = ['JEFE_EQUIPO', 'SUPERVISOR', 'MIEMBRO'];
+const ESTADOS = ['ACEPTADO', 'PENDIENTE', 'RECHAZADO'];
+
 const index = async (req, res) => {
   const { page, limit, skip } = getPageParams(req);
   const [equipos, total] = await Promise.all([
@@ -12,17 +15,26 @@ const index = async (req, res) => {
 
 const create = async (req, res) => {
   const usuarios = await prisma.usuario.findMany({ orderBy: { nombre: 'asc' } });
-  res.render('equipos_form', { equipo: null, usuarios, miembrosIds: [], title: 'Nuevo Equipo', active: 'equipos' });
+  res.render('equipos_form', { equipo: null, usuarios, miembros: {}, title: 'Nuevo Equipo', active: 'equipos' });
 };
+
+function leerMiembros(body) {
+  const ids = Array.isArray(body.miembros) ? body.miembros : body.miembros ? [body.miembros] : [];
+  return ids.map((uid) => ({
+    usuarioId: parseInt(uid),
+    rol: ROLES.includes(body['rol_' + uid]) ? body['rol_' + uid] : 'MIEMBRO',
+    estado: ESTADOS.includes(body['estado_' + uid]) ? body['estado_' + uid] : 'ACEPTADO',
+  }));
+}
 
 const store = async (req, res) => {
   try {
-    const { nombre, descripcion, miembros } = req.body;
-    const equipo = await prisma.equipo.create({ data: { nombre, descripcion } });
-    const ids = Array.isArray(miembros) ? miembros : miembros ? [miembros] : [];
-    if (ids.length) {
+    const { nombre, descripcion, imagen } = req.body;
+    const equipo = await prisma.equipo.create({ data: { nombre, descripcion, imagen: imagen || null } });
+    const miembros = leerMiembros(req.body);
+    if (miembros.length) {
       await prisma.equipoUsuario.createMany({
-        data: ids.map(id => ({ equipoId: equipo.id, usuarioId: parseInt(id) }))
+        data: miembros.map((m) => ({ equipoId: equipo.id, ...m })),
       });
     }
   } catch (err) { console.error(err); }
@@ -31,25 +43,26 @@ const store = async (req, res) => {
 
 const edit = async (req, res) => {
   const id = parseInt(req.params.id);
-  const [equipo, usuarios, miembros] = await Promise.all([
+  const [equipo, usuarios, filas] = await Promise.all([
     prisma.equipo.findUnique({ where: { id } }),
     prisma.usuario.findMany({ orderBy: { nombre: 'asc' } }),
-    prisma.equipoUsuario.findMany({ where: { equipoId: id } })
+    prisma.equipoUsuario.findMany({ where: { equipoId: id } }),
   ]);
-  const miembrosIds = miembros.map(m => m.usuarioId);
-  res.render('equipos_form', { equipo, usuarios, miembrosIds, title: 'Editar Equipo', active: 'equipos' });
+  const miembros = {};
+  filas.forEach((f) => { miembros[f.usuarioId] = { rol: f.rol, estado: f.estado }; });
+  res.render('equipos_form', { equipo, usuarios, miembros, title: 'Editar Equipo', active: 'equipos' });
 };
 
 const update = async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const { nombre, descripcion, miembros } = req.body;
-    await prisma.equipo.update({ where: { id }, data: { nombre, descripcion } });
-    const ids = Array.isArray(miembros) ? miembros : miembros ? [miembros] : [];
+    const { nombre, descripcion, imagen } = req.body;
+    await prisma.equipo.update({ where: { id }, data: { nombre, descripcion, imagen: imagen || null } });
+    const miembros = leerMiembros(req.body);
     await prisma.equipoUsuario.deleteMany({ where: { equipoId: id } });
-    if (ids.length) {
+    if (miembros.length) {
       await prisma.equipoUsuario.createMany({
-        data: ids.map(uid => ({ equipoId: id, usuarioId: parseInt(uid) }))
+        data: miembros.map((m) => ({ equipoId: id, ...m })),
       });
     }
   } catch (err) { console.error(err); }

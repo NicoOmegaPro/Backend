@@ -1,6 +1,5 @@
 const { fakerES: faker } = require('@faker-js/faker');
 
-// picsum.photos con seed fijo → misma imagen siempre, nunca broken
 const PICSUM_SEEDS = [
   'mountain', 'city', 'nature', 'architecture', 'tech', 'abstract',
   'office', 'team', 'code', 'design', 'data', 'cloud', 'mobile', 'web',

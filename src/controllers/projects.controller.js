@@ -2,7 +2,6 @@ const prisma = require('../prisma');
 const { registrarActividad } = require('../utils/registrarActividad');
 const { esJefeDeEquipo, rolEnProyecto } = require('../utils/permissions');
 
-// Miembros de un proyecto = miembros aceptados del equipo dueño (un único nivel de rol).
 function miembrosDesdeEquipo(equipo) {
   if (!equipo?.usuarios) return [];
   return equipo.usuarios
@@ -14,7 +13,6 @@ const getAllProjects = async (req, res) => {
   try {
     const { userId, esAdmin } = req.user;
 
-    // El admin ve todo; el resto, los proyectos de los equipos a los que pertenece.
     const where = esAdmin
       ? {}
       : { equipo: { usuarios: { some: { usuarioId: userId, estado: 'ACEPTADO' } } } };
@@ -58,10 +56,8 @@ const getProjectById = async (req, res) => {
     });
     if (!project) return res.status(404).json({ error: 'Proyecto no encontrado' });
 
-    // req.myProjectRole lo provee requireProjectAccess; si no, se calcula.
     const myProjectRole = req.myProjectRole ?? (await rolEnProyecto(userId, esAdmin, project));
 
-    // Miembros del proyecto derivados del equipo (compatibilidad con el frontend).
     res.json({ ...project, miembros: miembrosDesdeEquipo(project.equipo), myProjectRole });
   } catch (error) {
     console.error(error);
@@ -78,7 +74,6 @@ const createProject = async (req, res) => {
     const equipoIdInt = equipoId ? parseInt(equipoId) : null;
     if (!equipoIdInt) return res.status(400).json({ error: 'Debes seleccionar un equipo' });
 
-    // Solo el jefe del equipo (o el admin) puede crear proyectos para ese equipo.
     if (!esAdmin && !(await esJefeDeEquipo(userId, equipoIdInt))) {
       return res.status(403).json({ error: 'Solo el jefe del equipo puede crear proyectos en él' });
     }
@@ -113,7 +108,6 @@ const createProject = async (req, res) => {
 
 const updateProject = async (req, res) => {
   try {
-    // Editar/archivar el proyecto: solo el jefe de equipo (o admin).
     if (req.myProjectRole !== 'JEFE_EQUIPO') {
       return res.status(403).json({ error: 'Solo el jefe de equipo puede editar este proyecto' });
     }

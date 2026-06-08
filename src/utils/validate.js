@@ -1,6 +1,3 @@
-// Middleware genérico de validación con zod.
-// Uso: router.post('/', validate(miSchema), controlador)
-// Reemplaza req.body por los datos ya parseados/saneados.
 const validate = (schema) => (req, res, next) => {
   const result = schema.safeParse(req.body);
   if (!result.success) {

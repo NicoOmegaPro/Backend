@@ -1,7 +1,6 @@
 const prisma = require('../prisma');
 const { canAccessProject } = require('../utils/permissions');
 
-// Carga la subtarea de :id con su tarea/proyecto y valida acceso. Devuelve la subtarea o null.
 async function loadSubtareaConAcceso(req, res) {
   const subtarea = await prisma.subtarea.findUnique({
     where: { id: parseInt(req.params.id) },
@@ -19,7 +18,6 @@ async function loadSubtareaConAcceso(req, res) {
   return subtarea;
 }
 
-// GET /subtareas?tareaId=
 const getAllSubtareas = async (req, res) => {
   try {
     const { tareaId } = req.query;
@@ -47,7 +45,6 @@ const getSubtareaById = async (req, res) => {
   }
 };
 
-// POST /subtareas  { titulo, completada?, tareaId }  → req.task de requireBodyTaskAccess
 const createSubtarea = async (req, res) => {
   try {
     const { titulo, completada } = req.body;

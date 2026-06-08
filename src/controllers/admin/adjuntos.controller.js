@@ -16,9 +16,42 @@ const index = async (req, res) => {
   res.render('adjuntos', { adjuntos, title: 'Adjuntos', active: 'adjuntos', fmt, pagination: buildMeta({ page, limit, total }) });
 };
 
+async function opciones() {
+  const [usuarios, tareas] = await Promise.all([
+    prisma.usuario.findMany({ select: { id: true, nombre: true }, orderBy: { nombre: 'asc' } }),
+    prisma.tarea.findMany({ select: { id: true, titulo: true }, orderBy: { id: 'asc' } }),
+  ]);
+  return { usuarios, tareas };
+}
+
+const create = async (req, res) => {
+  res.render('adjuntos_form', { adjunto: null, ...(await opciones()), title: 'Nuevo Adjunto', active: 'adjuntos' });
+};
+
+const store = async (req, res) => {
+  try {
+    const { nombre, rutaLocal, tareaId, subidoPor } = req.body;
+    await prisma.adjunto.create({ data: { nombre, rutaLocal, tareaId: parseInt(tareaId), subidoPor: parseInt(subidoPor) } });
+  } catch (err) { console.error(err); }
+  res.redirect('/admin/adjuntos');
+};
+
+const edit = async (req, res) => {
+  const adjunto = await prisma.adjunto.findUnique({ where: { id: parseInt(req.params.id) } });
+  res.render('adjuntos_form', { adjunto, ...(await opciones()), title: 'Editar Adjunto', active: 'adjuntos' });
+};
+
+const update = async (req, res) => {
+  try {
+    const { nombre, rutaLocal, tareaId, subidoPor } = req.body;
+    await prisma.adjunto.update({ where: { id: parseInt(req.params.id) }, data: { nombre, rutaLocal, tareaId: parseInt(tareaId), subidoPor: parseInt(subidoPor) } });
+  } catch (err) { console.error(err); }
+  res.redirect('/admin/adjuntos');
+};
+
 const destroy = async (req, res) => {
   try { await prisma.adjunto.delete({ where: { id: parseInt(req.params.id) } }); } catch (err) { console.error(err); }
   res.redirect('/admin/adjuntos');
 };
 
-module.exports = { index, destroy };
+module.exports = { index, create, store, edit, update, destroy };

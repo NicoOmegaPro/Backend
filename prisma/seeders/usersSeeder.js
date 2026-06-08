@@ -3,7 +3,6 @@ const bcrypt = require('bcrypt');
 async function runUsersSeeder(prisma) {
   console.log('Ejecutando UsersSeeder...');
 
-  // SEED MANUAL: Crear un Super Admin que siempre exista
   const adminPassword = await bcrypt.hash('admin123', 10);
   const admin = await prisma.usuario.upsert({
     where: { email: 'admin@admin.com' },

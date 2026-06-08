@@ -1,0 +1,41 @@
+<%- include('_header') %>
+<div class="ph">
+  <span class="ph-t"><%= title %></span>
+  <a href="/admin/historial" class="btn btn-g"><i class="bi bi-arrow-left"></i>Volver</a>
+</div>
+<div class="fc">
+  <form action="<%= registro ? '/admin/historial/' + registro.id : '/admin/historial' %>" method="POST">
+    <div class="f-row">
+      <div class="f">
+        <label>Entidad (tipo)</label>
+        <input type="text" name="entidadTipo" value="<%= registro ? registro.entidadTipo : '' %>" placeholder="TAREA, PROYECTO…" required>
+      </div>
+      <div class="f">
+        <label>Entidad (ID)</label>
+        <input type="number" name="entidadId" value="<%= registro ? registro.entidadId : '' %>" required>
+      </div>
+    </div>
+    <div class="f-row">
+      <div class="f">
+        <label>Acción</label>
+        <input type="text" name="accion" value="<%= registro ? registro.accion : '' %>" placeholder="CREADO, ACTUALIZADO…" required>
+      </div>
+      <div class="f">
+        <label>Usuario</label>
+        <select name="usuarioId" required>
+          <% usuarios.forEach(u => { %>
+            <option value="<%= u.id %>" <%= registro && registro.usuarioId === u.id ? 'selected' : '' %>><%= u.nombre %></option>
+          <% }) %>
+        </select>
+      </div>
+    </div>
+    <div class="f">
+      <label>Detalles</label>
+      <textarea name="detalles" rows="2"><%= registro ? (registro.detalles || '') : '' %></textarea>
+    </div>
+    <div class="fa">
+      <button type="submit" class="btn btn-p"><i class="bi bi-floppy"></i>Guardar</button>
+    </div>
+  </form>
+</div>
+<%- include('_footer') %>

@@ -5,7 +5,6 @@ const PRIORIDADES = ['BAJA', 'MEDIA', 'ALTA', 'URGENTE'];
 const ESTADOS_PROYECTO = ['ACTIVO', 'COMPLETADO', 'ARCHIVADO'];
 const ESTADOS_SPRINT = ['PLANIFICADO', 'ACTIVO', 'COMPLETADO'];
 
-// Acepta string ISO, Date o null/'' → Date | null
 const fechaOpcional = z
   .union([z.string(), z.date(), z.null()])
   .optional()
@@ -24,7 +23,6 @@ const idOpcional = z
     return Number.isNaN(n) ? null : n;
   });
 
-/* ───────────── Auth ───────────── */
 const registerSchema = z.object({
   nombre: z.string().trim().min(2, 'El nombre debe tener al menos 2 caracteres').max(80),
   email: z.string().trim().toLowerCase().email('Email no válido'),
@@ -36,7 +34,6 @@ const loginSchema = z.object({
   password: z.string().min(1, 'La contraseña es obligatoria'),
 });
 
-/* ───────────── Tareas ───────────── */
 const createTaskSchema = z.object({
   titulo: z.string().trim().min(1, 'El título es obligatorio').max(200),
   descripcion: z.string().trim().max(5000).optional().nullable(),
@@ -61,7 +58,6 @@ const updateTaskSchema = z
   })
   .refine((d) => Object.keys(d).length > 0, { message: 'No hay campos que actualizar' });
 
-/* ───────────── Proyectos ───────────── */
 const createProjectSchema = z.object({
   nombre: z.string().trim().min(1, 'El nombre es obligatorio').max(120),
   descripcion: z.string().trim().max(2000).optional().nullable(),
@@ -76,7 +72,6 @@ const updateProjectSchema = z
   })
   .refine((d) => Object.keys(d).length > 0, { message: 'No hay campos que actualizar' });
 
-/* ───────────── Sprints ───────────── */
 const createSprintSchema = z.object({
   nombre: z.string().trim().min(1, 'El nombre es obligatorio').max(120),
   objetivo: z.string().trim().max(1000).optional().nullable(),
@@ -96,7 +91,6 @@ const updateSprintSchema = z
   })
   .refine((d) => Object.keys(d).length > 0, { message: 'No hay campos que actualizar' });
 
-/* ───────────── Subtareas / Comentarios ───────────── */
 const createSubtareaSchema = z.object({
   titulo: z.string().trim().min(1, 'El título es obligatorio').max(200),
   completada: z.boolean().optional(),
@@ -115,7 +109,6 @@ const createComentarioSchema = z.object({
   tareaId: z.union([z.number(), z.string()]).transform((v) => parseInt(v)),
 });
 
-/* ───────────── Equipos ───────────── */
 const createEquipoSchema = z.object({
   nombre: z.string().trim().min(1, 'El nombre es obligatorio').max(120),
   descripcion: z.string().trim().max(2000).optional().nullable(),

@@ -6,7 +6,6 @@ async function createRandomUsers(prisma, count) {
   const users = [];
 
   for (let i = 0; i < count; i++) {
-    // Inyectamos el índice en el local-part para garantizar emails únicos (campo @unique).
     const email = faker.internet.email().toLowerCase().replace('@', `${i}@`);
     const user = await prisma.usuario.create({
       data: {
@@ -14,8 +13,8 @@ async function createRandomUsers(prisma, count) {
         email,
         password: password,
         descripcion: faker.person.bio(),
-        imagenPerfil: faker.image.avatar(), // foto de retrato (URL absoluta en CDN)
-        esAdmin: false // el único admin es la cuenta del seeder; los roles van por equipo
+        imagenPerfil: faker.image.avatar(),
+        esAdmin: false
       }
     });
     users.push(user);

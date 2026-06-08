@@ -1,14 +1,9 @@
 const prisma = require('../prisma');
 
-// Roles de equipo: único nivel de rol además del admin global (booleano).
 const ROLES_EQUIPO = ['JEFE_EQUIPO', 'SUPERVISOR', 'MIEMBRO'];
-// Roles con permisos de gestión (finalizar/eliminar tareas, etiquetas, etc.).
 const ROLES_GESTION = ['JEFE_EQUIPO', 'SUPERVISOR'];
 
-/* ───────────────────────── helpers de rol ───────────────────────── */
 
-// Rol del usuario dentro de un equipo (o null si no es miembro aceptado).
-// El admin global actúa como JEFE_EQUIPO en cualquier equipo.
 async function rolEnEquipo(userId, esAdmin, equipoId) {
   if (esAdmin) return 'JEFE_EQUIPO';
   if (!equipoId) return null;
@@ -18,7 +13,6 @@ async function rolEnEquipo(userId, esAdmin, equipoId) {
   return mem?.estado === 'ACEPTADO' ? mem.rol : null;
 }
 
-// ¿Es el usuario jefe del equipo dueño del proyecto?
 async function esJefeDeEquipo(userId, equipoId) {
   if (!equipoId) return false;
   const mem = await prisma.equipoUsuario.findUnique({
@@ -27,7 +21,6 @@ async function esJefeDeEquipo(userId, equipoId) {
   return mem?.estado === 'ACEPTADO' && mem.rol === 'JEFE_EQUIPO';
 }
 
-// ¿Pertenece el usuario (aceptado) al equipo?
 async function esMiembroDeEquipo(userId, equipoId) {
   if (!equipoId) return false;
   const mem = await prisma.equipoUsuario.findUnique({
@@ -36,20 +29,16 @@ async function esMiembroDeEquipo(userId, equipoId) {
   return mem?.estado === 'ACEPTADO';
 }
 
-// El rol en un proyecto = el rol del usuario en el equipo dueño del proyecto.
 async function rolEnProyecto(userId, esAdmin, project) {
   return rolEnEquipo(userId, esAdmin, project?.equipoId);
 }
 
-// ¿Puede el usuario ver/acceder a un proyecto? (admin o miembro aceptado del equipo)
 async function canAccessProject(userId, esAdmin, project) {
   if (esAdmin) return true;
   return esMiembroDeEquipo(userId, project.equipoId);
 }
 
-/* ───────────────────────── middlewares ───────────────────────── */
 
-// Carga el proyecto de :id, valida acceso y lo deja en req.project.
 const requireProjectAccess = async (req, res, next) => {
   try {
     const projectId = parseInt(req.params.id);
@@ -72,8 +61,6 @@ const requireProjectAccess = async (req, res, next) => {
   }
 };
 
-// Como requireProjectAccess pero leyendo el id del proyecto del body (para crear recursos).
-// Campo configurable: por defecto 'proyectoId'.
 const requireBodyProjectAccess = (campo = 'proyectoId') => async (req, res, next) => {
   try {
     const projectId = parseInt(req.body[campo]);
@@ -96,7 +83,6 @@ const requireBodyProjectAccess = (campo = 'proyectoId') => async (req, res, next
   }
 };
 
-// Valida acceso a la tarea referida por req.body.tareaId (para subtareas/comentarios/adjuntos).
 const requireBodyTaskAccess = (campo = 'tareaId') => async (req, res, next) => {
   try {
     const taskId = parseInt(req.body[campo]);
@@ -122,7 +108,6 @@ const requireBodyTaskAccess = (campo = 'tareaId') => async (req, res, next) => {
   }
 };
 
-// Carga la tarea de :id (con su proyecto), valida acceso y deja req.task / req.project.
 const requireTaskAccess = async (req, res, next) => {
   try {
     const taskId = parseInt(req.params.id);

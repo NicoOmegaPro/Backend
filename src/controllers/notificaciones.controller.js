@@ -1,7 +1,5 @@
 const prisma = require('../prisma');
 
-// GET /notificaciones?page=&limit=&soloNoLeidas=
-// Devuelve SOLO las notificaciones del usuario autenticado.
 const getAllNotificaciones = async (req, res) => {
   try {
     const userId = req.user.userId;
@@ -29,7 +27,6 @@ const getAllNotificaciones = async (req, res) => {
   }
 };
 
-// PUT /notificaciones/:id  { leida }  → solo notificaciones propias
 const updateNotificacion = async (req, res) => {
   try {
     const userId = req.user.userId;
@@ -48,7 +45,6 @@ const updateNotificacion = async (req, res) => {
   }
 };
 
-// PUT /notificaciones/marcar-todas  → marca todas las del usuario como leídas
 const marcarTodasLeidas = async (req, res) => {
   try {
     await prisma.notificacion.updateMany({
@@ -62,7 +58,6 @@ const marcarTodasLeidas = async (req, res) => {
   }
 };
 
-// DELETE /notificaciones/:id  → solo notificaciones propias
 const deleteNotificacion = async (req, res) => {
   try {
     const userId = req.user.userId;

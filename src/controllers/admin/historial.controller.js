@@ -16,4 +16,43 @@ const index = async (req, res) => {
   res.render('historial', { historial, title: 'Historial', active: 'historial', fmt, pagination: buildMeta({ page, limit, total }) });
 };
 
-module.exports = { index };
+async function usuarios() {
+  return prisma.usuario.findMany({ select: { id: true, nombre: true }, orderBy: { nombre: 'asc' } });
+}
+
+const create = async (req, res) => {
+  res.render('historial_form', { registro: null, usuarios: await usuarios(), title: 'Nuevo Registro', active: 'historial' });
+};
+
+const store = async (req, res) => {
+  try {
+    const { entidadTipo, entidadId, accion, detalles, usuarioId } = req.body;
+    await prisma.historialActividad.create({
+      data: { entidadTipo, entidadId: parseInt(entidadId), accion, detalles: detalles || null, usuarioId: parseInt(usuarioId) },
+    });
+  } catch (err) { console.error(err); }
+  res.redirect('/admin/historial');
+};
+
+const edit = async (req, res) => {
+  const registro = await prisma.historialActividad.findUnique({ where: { id: parseInt(req.params.id) } });
+  res.render('historial_form', { registro, usuarios: await usuarios(), title: 'Editar Registro', active: 'historial' });
+};
+
+const update = async (req, res) => {
+  try {
+    const { entidadTipo, entidadId, accion, detalles, usuarioId } = req.body;
+    await prisma.historialActividad.update({
+      where: { id: parseInt(req.params.id) },
+      data: { entidadTipo, entidadId: parseInt(entidadId), accion, detalles: detalles || null, usuarioId: parseInt(usuarioId) },
+    });
+  } catch (err) { console.error(err); }
+  res.redirect('/admin/historial');
+};
+
+const destroy = async (req, res) => {
+  try { await prisma.historialActividad.delete({ where: { id: parseInt(req.params.id) } }); } catch (err) { console.error(err); }
+  res.redirect('/admin/historial');
+};
+
+module.exports = { index, create, store, edit, update, destroy };

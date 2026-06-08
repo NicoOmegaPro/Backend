@@ -1,10 +1,8 @@
 const prisma = require('../prisma');
 
-// Devuelve los IDs de proyectos a los que el usuario tiene acceso (o null = todos, para admin).
 async function getAccessibleProjectIds(userId, esAdmin) {
-  if (esAdmin) return null; // admin: todos
+  if (esAdmin) return null;
 
-  // El acceso a proyectos sale solo de la pertenencia a equipos (un único nivel de rol).
   const memberships = await prisma.equipoUsuario.findMany({
     where: { usuarioId: userId, estado: 'ACEPTADO' },
     select: { equipoId: true },
@@ -19,7 +17,6 @@ async function getAccessibleProjectIds(userId, esAdmin) {
   return proyectos.map((p) => p.id);
 }
 
-// GET /dashboard  → métricas para el usuario autenticado
 const getDashboard = async (req, res) => {
   try {
     const { userId, esAdmin } = req.user;
@@ -48,7 +45,6 @@ const getDashboard = async (req, res) => {
       prisma.proyecto.count({ where: projectIds === null ? {} : { id: { in: projectIds } } }),
     ]);
 
-    // Normalizar agrupaciones a objetos { ESTADO: n }
     const estados = ['PENDIENTE', 'EN_PROGRESO', 'EN_REVISION', 'FINALIZADO'];
     const prioridades = ['BAJA', 'MEDIA', 'ALTA', 'URGENTE'];
     const tareasPorEstado = Object.fromEntries(estados.map((e) => [e, 0]));
@@ -59,7 +55,6 @@ const getDashboard = async (req, res) => {
     const completadas = tareasPorEstado.FINALIZADO;
     const progreso = totalTareas > 0 ? Math.round((completadas / totalTareas) * 100) : 0;
 
-    // Próximas tareas del usuario (con vencimiento, no finalizadas)
     const proximasTareas = await prisma.tarea.findMany({
       where: { ...scope, asignadoAId: userId, estado: { not: 'FINALIZADO' }, fechaVencimiento: { not: null } },
       orderBy: { fechaVencimiento: 'asc' },

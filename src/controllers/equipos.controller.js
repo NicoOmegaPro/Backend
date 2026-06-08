@@ -2,19 +2,13 @@ const prisma = require('../prisma');
 const { registrarActividad } = require('../utils/registrarActividad');
 const { getPageParams, buildMeta } = require('../utils/paginate');
 
-// Único nivel de rol: el del equipo (JEFE_EQUIPO | SUPERVISOR | MIEMBRO).
-// Ese rol gobierna también los permisos en los proyectos del equipo.
 
-/* ─── helpers ─── */
 async function getMembership(usuarioId, equipoId) {
   return prisma.equipoUsuario.findUnique({
     where: { usuarioId_equipoId: { usuarioId, equipoId } },
   });
 }
 
-/* ════════════════════════════════════════
-   GET /equipos  →  mis equipos (aceptados)
-   ════════════════════════════════════════ */
 const getAllEquipos = async (req, res) => {
   try {
     const { userId, esAdmin } = req.user;
@@ -31,13 +25,11 @@ const getAllEquipos = async (req, res) => {
       proyectos: { select: { id: true, nombre: true, estado: true } },
     };
 
-    // Añadir myRol a cada equipo
     const withRol = (eq) => {
       const mem = eq.usuarios.find((u) => u.usuarioId === userId);
       return { ...eq, myRol: esAdmin ? 'JEFE_EQUIPO' : (mem?.rol ?? null) };
     };
 
-    // Compatibilidad: paginamos solo si llega ?page; si no, array completo de siempre.
     if (req.query.page !== undefined || req.query.limit !== undefined) {
       const { page, limit, skip } = getPageParams(req, { defaultLimit: 10 });
       const [equipos, total] = await Promise.all([
@@ -55,9 +47,6 @@ const getAllEquipos = async (req, res) => {
   }
 };
 
-/* ════════════════════════════════════
-   GET /equipos/:id
-   ════════════════════════════════════ */
 const getEquipoById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -82,9 +71,6 @@ const getEquipoById = async (req, res) => {
   }
 };
 
-/* ══════════════════════════════════════════════════════
-   POST /equipos  →  crear equipo + auto JEFE_EQUIPO
-   ══════════════════════════════════════════════════════ */
 const createEquipo = async (req, res) => {
   try {
     const { nombre, descripcion } = req.body;
@@ -122,20 +108,15 @@ const createEquipo = async (req, res) => {
   }
 };
 
-/* ══════════════════════════════════════════════════════
-   POST /equipos/:id/invitar
-   Body: { email, rol? }
-   ══════════════════════════════════════════════════════ */
 const invitarMiembro = async (req, res) => {
   try {
     const equipoId = parseInt(req.params.id);
     const { userId, esAdmin } = req.user;
     const { email } = req.body;
-    const rol = 'MIEMBRO'; // Los invitados entran siempre como miembros del equipo.
+    const rol = 'MIEMBRO';
 
     if (!email) return res.status(400).json({ error: 'El email es obligatorio' });
 
-    // Solo JEFE_EQUIPO puede invitar (o admin)
     if (!esAdmin) {
       const mem = await getMembership(userId, equipoId);
       if (!mem || mem.rol !== 'JEFE_EQUIPO' || mem.estado !== 'ACEPTADO') {
@@ -143,17 +124,14 @@ const invitarMiembro = async (req, res) => {
       }
     }
 
-    // Buscar usuario por email
     const invitado = await prisma.usuario.findUnique({ where: { email: email.trim() } });
     if (!invitado) return res.status(404).json({ error: 'No existe ningún usuario con ese email' });
     if (invitado.id === userId) return res.status(400).json({ error: 'No puedes invitarte a ti mismo' });
 
-    // Comprobar si ya es miembro
     const yaExiste = await getMembership(invitado.id, equipoId);
     if (yaExiste) {
       if (yaExiste.estado === 'ACEPTADO') return res.status(409).json({ error: 'El usuario ya es miembro del equipo' });
       if (yaExiste.estado === 'PENDIENTE') return res.status(409).json({ error: 'Ya tienes una invitación pendiente para este usuario' });
-      // RECHAZADO: actualizamos a pendiente de nuevo
       await prisma.equipoUsuario.update({
         where: { usuarioId_equipoId: { usuarioId: invitado.id, equipoId } },
         data: { rol, estado: 'PENDIENTE' },
@@ -164,7 +142,6 @@ const invitarMiembro = async (req, res) => {
       });
     }
 
-    // Obtener datos del equipo e invitador para la notificación
     const equipo = await prisma.equipo.findUnique({ where: { id: equipoId }, select: { nombre: true } });
     const invitador = await prisma.usuario.findUnique({ where: { id: userId }, select: { nombre: true } });
 
@@ -200,9 +177,6 @@ const invitarMiembro = async (req, res) => {
   }
 };
 
-/* ══════════════════════════════════════════════════════
-   PUT /equipos/:id/aceptar   →  el usuario acepta su invitación
-   ══════════════════════════════════════════════════════ */
 const aceptarInvitacion = async (req, res) => {
   try {
     const equipoId = parseInt(req.params.id);
@@ -217,7 +191,6 @@ const aceptarInvitacion = async (req, res) => {
       data: { estado: 'ACEPTADO' },
     });
 
-    // Marcar notificación de invitación como leída
     const notifsRaw = await prisma.notificacion.findMany({
       where: { usuarioId: userId, tipo: 'INVITACION_EQUIPO', leida: false },
     });
@@ -247,9 +220,6 @@ const aceptarInvitacion = async (req, res) => {
   }
 };
 
-/* ══════════════════════════════════════════════════════
-   DELETE /equipos/:id/rechazar
-   ══════════════════════════════════════════════════════ */
 const rechazarInvitacion = async (req, res) => {
   try {
     const equipoId = parseInt(req.params.id);
@@ -264,7 +234,6 @@ const rechazarInvitacion = async (req, res) => {
       where: { usuarioId_equipoId: { usuarioId: userId, equipoId } },
     });
 
-    // Marcar notificación como leída
     const notifsRaw = await prisma.notificacion.findMany({
       where: { usuarioId: userId, tipo: 'INVITACION_EQUIPO', leida: false },
     });
@@ -285,10 +254,6 @@ const rechazarInvitacion = async (req, res) => {
   }
 };
 
-/* ══════════════════════════════════════════════════════
-   PUT /equipos/:id/miembros/:userId/rol   Body: { rol }
-   Cambia el rol de un miembro (solo jefe de equipo o admin).
-   ══════════════════════════════════════════════════════ */
 const ROLES_ASIGNABLES = ['SUPERVISOR', 'MIEMBRO'];
 const cambiarRolMiembro = async (req, res) => {
   try {
@@ -327,16 +292,12 @@ const cambiarRolMiembro = async (req, res) => {
   }
 };
 
-/* ══════════════════════════════════════════════════════
-   DELETE /equipos/:id/miembros/:userId
-   ══════════════════════════════════════════════════════ */
 const expulsarMiembro = async (req, res) => {
   try {
     const equipoId = parseInt(req.params.id);
     const targetUserId = parseInt(req.params.userId);
     const { userId, esAdmin } = req.user;
 
-    // Solo JEFE_EQUIPO puede expulsar
     if (!esAdmin) {
       const mem = await getMembership(userId, equipoId);
       if (!mem || mem.rol !== 'JEFE_EQUIPO') {
@@ -363,9 +324,6 @@ const expulsarMiembro = async (req, res) => {
   }
 };
 
-/* ══════════════════════════════════════════════════════
-   PUT /equipos/:id   DELETE /equipos/:id  (sin cambios funcionales)
-   ══════════════════════════════════════════════════════ */
 const updateEquipo = async (req, res) => {
   try {
     const { id } = req.params;
@@ -392,10 +350,6 @@ const updateEquipo = async (req, res) => {
   }
 };
 
-/* ══════════════════════════════════════════════════════
-   POST /equipos/:id/imagen   (multipart: image)
-   Sube/actualiza la imagen del equipo (solo jefe de equipo o admin).
-   ══════════════════════════════════════════════════════ */
 const uploadImagenEquipo = async (req, res) => {
   try {
     const equipoId = parseInt(req.params.id);

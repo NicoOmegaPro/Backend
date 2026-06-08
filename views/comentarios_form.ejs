@@ -1,0 +1,33 @@
+<%- include('_header') %>
+<div class="ph">
+  <span class="ph-t"><%= title %></span>
+  <a href="/admin/comentarios" class="btn btn-g"><i class="bi bi-arrow-left"></i>Volver</a>
+</div>
+<div class="fc">
+  <form action="<%= comentario ? '/admin/comentarios/' + comentario.id : '/admin/comentarios' %>" method="POST">
+    <div class="f">
+      <label>Contenido</label>
+      <textarea name="contenido" rows="3" required><%= comentario ? comentario.contenido : '' %></textarea>
+    </div>
+    <div class="f">
+      <label>Tarea</label>
+      <select name="tareaId" required>
+        <% tareas.forEach(t => { %>
+          <option value="<%= t.id %>" <%= comentario && comentario.tareaId === t.id ? 'selected' : '' %>>#<%= t.id %> — <%= t.titulo %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="f">
+      <label>Autor</label>
+      <select name="autorId" required>
+        <% usuarios.forEach(u => { %>
+          <option value="<%= u.id %>" <%= comentario && comentario.autorId === u.id ? 'selected' : '' %>><%= u.nombre %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="fa">
+      <button type="submit" class="btn btn-p"><i class="bi bi-floppy"></i>Guardar</button>
+    </div>
+  </form>
+</div>
+<%- include('_footer') %>

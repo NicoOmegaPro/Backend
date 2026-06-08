@@ -7,7 +7,6 @@ async function createRandomSprints(prisma, proyectos, countPorProyecto) {
 
   for (const proyecto of proyectos) {
     for (let i = 0; i < countPorProyecto; i++) {
-      // El primer sprint está ACTIVO (abarca hoy); los siguientes quedan PLANIFICADOS a futuro.
       let inicio, fin, estado;
       if (i === 0) {
         inicio = new Date(now.getTime() - faker.number.int({ min: 3, max: 10 }) * DAY);

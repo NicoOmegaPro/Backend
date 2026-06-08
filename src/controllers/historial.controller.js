@@ -1,6 +1,5 @@
 const prisma = require('../prisma');
 
-// GET /historial?page=&limit=
 const getAllHistorial = async (req, res) => {
   try {
     const { userId, esAdmin } = req.user;

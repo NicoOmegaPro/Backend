@@ -2,7 +2,6 @@ const prisma = require('../../prisma');
 const bcrypt = require('bcrypt');
 const { getPageParams, buildMeta } = require('../../utils/paginate');
 
-// Convierte el valor del checkbox/textarea del form a booleano.
 const toBool = (v) => ['on', 'true', '1', true].includes(v);
 
 const index = async (req, res) => {

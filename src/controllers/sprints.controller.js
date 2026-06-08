@@ -2,7 +2,6 @@ const prisma = require('../prisma');
 const { registrarActividad } = require('../utils/registrarActividad');
 const { canAccessProject, rolEnProyecto, ROLES_GESTION } = require('../utils/permissions');
 
-// GET /sprints?proyectoId=  → sprints de un proyecto (requiere acceso)
 const getAllSprints = async (req, res) => {
   try {
     const { proyectoId } = req.query;
@@ -47,7 +46,6 @@ const getSprintById = async (req, res) => {
   }
 };
 
-// POST /sprints  → req.project / req.myProjectRole de requireBodyProjectAccess
 const createSprint = async (req, res) => {
   try {
     if (!ROLES_GESTION.includes(req.myProjectRole)) {
@@ -78,7 +76,6 @@ const createSprint = async (req, res) => {
   }
 };
 
-// Carga el sprint de :id, valida que el usuario sea gestor del proyecto. Devuelve el sprint o null.
 async function loadSprintGestion(req, res) {
   const sprint = await prisma.sprint.findUnique({
     where: { id: parseInt(req.params.id) },

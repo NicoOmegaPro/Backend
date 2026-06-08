@@ -3,7 +3,6 @@ const path = require('path');
 const prisma = require('../prisma');
 const { canAccessProject, ROLES_GESTION, rolEnProyecto } = require('../utils/permissions');
 
-// GET /adjuntos?tareaId=
 const getAllAdjuntos = async (req, res) => {
   try {
     const { tareaId } = req.query;
@@ -21,8 +20,6 @@ const getAllAdjuntos = async (req, res) => {
   }
 };
 
-// POST /adjuntos  { rutaLocal, nombre, tareaId }  → subidoPor = usuario autenticado
-// req.task viene de requireBodyTaskAccess
 const createAdjunto = async (req, res) => {
   try {
     const { rutaLocal, nombre } = req.body;
@@ -39,7 +36,6 @@ const createAdjunto = async (req, res) => {
   }
 };
 
-// DELETE /adjuntos/:id  → quien lo subió o un gestor del proyecto; borra también el fichero.
 const deleteAdjunto = async (req, res) => {
   try {
     const { userId, esAdmin } = req.user;
@@ -60,7 +56,6 @@ const deleteAdjunto = async (req, res) => {
 
     await prisma.adjunto.delete({ where: { id: adjunto.id } });
 
-    // Borrar el fichero físico (best-effort).
     if (adjunto.rutaLocal?.startsWith('/uploads/')) {
       const filePath = path.join(__dirname, '../../public', adjunto.rutaLocal);
       fs.unlink(filePath, () => {});

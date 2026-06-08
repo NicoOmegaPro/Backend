@@ -8,7 +8,6 @@ async function createRandomTasks(prisma, proyectos, users, countPorProyecto, spr
   const DAY = 24 * 60 * 60 * 1000;
 
   for (const proyecto of proyectos) {
-    // Asignamos a miembros reales del proyecto y a sprints de ese mismo proyecto.
     const projectMembers = proyecto.miembros && proyecto.miembros.length ? proyecto.miembros : users;
     const projectSprints = sprints.filter((s) => s.proyectoId === proyecto.id);
 
@@ -16,7 +15,6 @@ async function createRandomTasks(prisma, proyectos, users, countPorProyecto, spr
       const asignado = faker.helpers.arrayElement(projectMembers);
       const sprint = projectSprints.length ? faker.helpers.arrayElement(projectSprints) : null;
 
-      // Vencimiento variado: algunas vencidas (-10d), otras próximas o lejanas (+21d).
       const offsetDias = faker.number.int({ min: -10, max: 21 });
       const fechaVencimiento = new Date(now + offsetDias * DAY);
 

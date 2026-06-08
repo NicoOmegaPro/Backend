@@ -3,7 +3,6 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 
-// Import routes
 const authRoutes = require('./routes/auth.routes');
 const usersRoutes = require('./routes/users.routes');
 const projectsRoutes = require('./routes/projects.routes');
@@ -22,19 +21,16 @@ const { authenticate } = require('./middleware/auth');
 
 const app = express();
 
-// View engine
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, '../views'));
 
-// Middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.get('/', (req, res) => res.redirect('/admin/users'));
 app.use(express.static(path.join(__dirname, '../public')));
 
-// Routes
-app.use('/api/auth', authRoutes);                                    // login/register públicos
+app.use('/api/auth', authRoutes);
 app.use('/api/users', authenticate, usersRoutes);
 app.use('/api/projects', authenticate, projectsRoutes);
 app.use('/api/tasks', authenticate, tasksRoutes);
@@ -49,7 +45,6 @@ app.use('/api/historial', authenticate, historialRoutes);
 app.use('/api/dashboard', authenticate, dashboardRoutes);
 app.use('/admin', adminRoutes);
 
-// Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'API is running' });
 });

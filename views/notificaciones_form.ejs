@@ -1,0 +1,35 @@
+<%- include('_header') %>
+<div class="ph">
+  <span class="ph-t"><%= title %></span>
+  <a href="/admin/notificaciones" class="btn btn-g"><i class="bi bi-arrow-left"></i>Volver</a>
+</div>
+<div class="fc">
+  <form action="<%= notificacion ? '/admin/notificaciones/' + notificacion.id : '/admin/notificaciones' %>" method="POST">
+    <div class="f">
+      <label>Mensaje</label>
+      <textarea name="mensaje" rows="3" required><%= notificacion ? notificacion.mensaje : '' %></textarea>
+    </div>
+    <div class="f-row">
+      <div class="f">
+        <label>Tipo</label>
+        <input type="text" name="tipo" value="<%= notificacion ? notificacion.tipo : '' %>" placeholder="NUEVA_TAREA, COMENTARIO…" required>
+      </div>
+      <div class="f">
+        <label>Usuario</label>
+        <select name="usuarioId" required>
+          <% usuarios.forEach(u => { %>
+            <option value="<%= u.id %>" <%= notificacion && notificacion.usuarioId === u.id ? 'selected' : '' %>><%= u.nombre %></option>
+          <% }) %>
+        </select>
+      </div>
+    </div>
+    <div class="f-check">
+      <input type="checkbox" name="leida" id="leida" <%= notificacion && notificacion.leida ? 'checked' : '' %>>
+      <label for="leida">Leída</label>
+    </div>
+    <div class="fa">
+      <button type="submit" class="btn btn-p"><i class="bi bi-floppy"></i>Guardar</button>
+    </div>
+  </form>
+</div>
+<%- include('_footer') %>

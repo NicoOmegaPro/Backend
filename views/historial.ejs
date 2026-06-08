@@ -1,12 +1,13 @@
 <%- include('_header') %>
 <div class="ph">
   <span class="ph-t">Historial de actividad</span>
+  <a href="/admin/historial/create" class="btn btn-p"><i class="bi bi-plus-lg"></i>Nuevo</a>
 </div>
 <div class="dc">
   <div class="tw">
     <table class="dt">
       <thead>
-        <tr><th>ID</th><th>Entidad</th><th>ID Entidad</th><th>Acción</th><th>Detalles</th><th>Usuario</th><th>Fecha</th></tr>
+        <tr><th>ID</th><th>Entidad</th><th>ID Entidad</th><th>Acción</th><th>Detalles</th><th>Usuario</th><th>Fecha</th><th></th></tr>
       </thead>
       <tbody>
         <% historial.forEach(h => { %>
@@ -18,9 +19,15 @@
           <td class="cm"><%= h.detalles ? (h.detalles.length > 50 ? h.detalles.substring(0,50)+'…' : h.detalles) : '-' %></td>
           <td class="cm"><%= h.usuario?.nombre || '-' %></td>
           <td class="cm"><%= fmt(h.fecha) %></td>
+          <td class="ca">
+            <a href="/admin/historial/<%= h.id %>/edit" class="ib ib-e"><i class="bi bi-pencil"></i></a>
+            <form action="/admin/historial/<%= h.id %>/delete" method="POST" style="display:inline" onsubmit="return confirm('¿Eliminar registro?')">
+              <button class="ib ib-d"><i class="bi bi-trash"></i></button>
+            </form>
+          </td>
         </tr>
         <% }) %>
-        <% if (!historial.length) { %><tr class="erow"><td colspan="7">Sin registros</td></tr><% } %>
+        <% if (!historial.length) { %><tr class="erow"><td colspan="8">Sin registros</td></tr><% } %>
       </tbody>
     </table>
   </div>

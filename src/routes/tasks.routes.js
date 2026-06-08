@@ -14,7 +14,6 @@ router.get('/:id', requireTaskAccess, tasksController.getTaskById);
 router.put('/:id', validate(updateTaskSchema), requireTaskAccess, tasksController.updateTask);
 router.delete('/:id', requireTaskAccess, tasksController.deleteTask);
 
-// Etiquetas de una tarea
 router.post('/:id/etiquetas', requireTaskAccess, tasksController.addEtiqueta);
 router.delete('/:id/etiquetas/:etiquetaId', requireTaskAccess, tasksController.removeEtiqueta);
 

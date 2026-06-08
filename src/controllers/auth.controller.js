@@ -6,16 +6,13 @@ const register = async (req, res) => {
   try {
     const { email, password, nombre } = req.body;
 
-    // Check if user exists
     const existingUser = await prisma.usuario.findUnique({ where: { email } });
     if (existingUser) {
       return res.status(400).json({ error: 'El usuario ya existe' });
     }
 
-    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create user SIN rol global. Los roles se obtienen al crear/unirse a equipos y proyectos.
     const newUser = await prisma.usuario.create({
       data: {
         email,
@@ -35,19 +32,16 @@ const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Find user
     const user = await prisma.usuario.findUnique({ where: { email } });
     if (!user) {
       return res.status(401).json({ error: 'Credenciales inválidas' });
     }
 
-    // Check password
     const validPassword = await bcrypt.compare(password, user.password);
     if (!validPassword) {
       return res.status(401).json({ error: 'Credenciales inválidas' });
     }
 
-    // Generate token
     const token = jwt.sign(
       { id: user.id, userId: user.id, email: user.email, esAdmin: user.esAdmin },
       process.env.JWT_SECRET,

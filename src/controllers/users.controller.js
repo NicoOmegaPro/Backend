@@ -8,13 +8,11 @@ const getAllUsers = async (req, res) => {
 
     let where = {};
     if (!esAdmin) {
-      // Si el usuario es JEFE_EQUIPO de algún equipo, puede ver a todos (para invitar)
       const isTeamLeader = await prisma.equipoUsuario.findFirst({
         where: { usuarioId: userId, rol: 'JEFE_EQUIPO', estado: 'ACEPTADO' },
       });
 
       if (!isTeamLeader) {
-        // Miembro normal: solo compañeros de equipo
         const myMemberships = await prisma.equipoUsuario.findMany({
           where: { usuarioId: userId, estado: 'ACEPTADO' },
           select: { equipoId: true },
@@ -25,10 +23,8 @@ const getAllUsers = async (req, res) => {
           ? { equipos: { some: { equipoId: { in: myTeamIds } } } }
           : { id: userId };
       }
-      // Si es JEFE_EQUIPO: where = {} → ve todos
     }
 
-    // Búsqueda opcional por nombre o email (?q=)
     const q = (req.query.q || '').trim();
     if (q) {
       where = {
@@ -49,8 +45,6 @@ const getAllUsers = async (req, res) => {
       esAdmin: true,
     };
 
-    // Compatibilidad: solo paginamos si llega ?page. Sin él, devolvemos el array
-    // completo de siempre (lo usan selects/desplegables que necesitan todos los usuarios).
     if (req.query.page !== undefined || req.query.limit !== undefined) {
       const { page, limit, skip } = getPageParams(req, { defaultLimit: 20 });
       const [items, total] = await Promise.all([
@@ -105,7 +99,6 @@ const updateUser = async (req, res) => {
     const { id } = req.params;
     const data = req.body;
 
-    // Evitar que actualicen la contraseña por este endpoint directamente
     delete data.password;
 
     const user = await prisma.usuario.update({

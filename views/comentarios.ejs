@@ -1,6 +1,7 @@
 <%- include('_header') %>
 <div class="ph">
   <span class="ph-t">Comentarios</span>
+  <a href="/admin/comentarios/create" class="btn btn-p"><i class="bi bi-plus-lg"></i>Nuevo</a>
 </div>
 <div class="dc">
   <div class="tw">
@@ -17,6 +18,7 @@
           <td class="cm"><%= c.autor?.nombre || '-' %></td>
           <td class="cm"><%= fmt(c.fecha) %></td>
           <td class="ca">
+            <a href="/admin/comentarios/<%= c.id %>/edit" class="ib ib-e"><i class="bi bi-pencil"></i></a>
             <form action="/admin/comentarios/<%= c.id %>/delete" method="POST" style="display:inline" onsubmit="return confirm('¿Eliminar comentario?')">
               <button class="ib ib-d"><i class="bi bi-trash"></i></button>
             </form>

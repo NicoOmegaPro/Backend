@@ -9,7 +9,6 @@ const ESTADO_LABEL = {
   FINALIZADO: 'Finalizado',
 };
 
-// ¿Puede el usuario finalizar/eliminar tareas del proyecto? (jefe de equipo o supervisor)
 async function puedeFinalizarTareas(userId, esAdmin, proyecto) {
   if (esAdmin) return true;
   if (!proyecto?.equipoId) return false;
@@ -19,11 +18,6 @@ async function puedeFinalizarTareas(userId, esAdmin, proyecto) {
   return mem?.estado === 'ACEPTADO' && ['JEFE_EQUIPO', 'SUPERVISOR'].includes(mem.rol);
 }
 
-/* ───────────────────────────────────────────────────────────
-   GET /tasks  →  con filtros y búsqueda
-   Query: proyectoId, estado, prioridad, asignadoAId, sprintId,
-          q (busca en título/descripción), vencidas=true
-   ─────────────────────────────────────────────────────────── */
 const getAllTasks = async (req, res) => {
   try {
     const { userId, esAdmin } = req.user;
@@ -31,7 +25,6 @@ const getAllTasks = async (req, res) => {
 
     const and = [];
 
-    // Ámbito: el admin ve todo; el resto solo tareas de proyectos de sus equipos o donde participa.
     if (!esAdmin) {
       const memberships = await prisma.equipoUsuario.findMany({
         where: { usuarioId: userId, estado: 'ACEPTADO' },
@@ -84,7 +77,6 @@ const getAllTasks = async (req, res) => {
 
 const getTaskById = async (req, res) => {
   try {
-    // req.task ya viene cargado por requireTaskAccess (con su proyecto).
     const task = await prisma.tarea.findUnique({
       where: { id: req.task.id },
       include: {
@@ -112,11 +104,9 @@ const getTaskById = async (req, res) => {
 
 const createTask = async (req, res) => {
   try {
-    // req.project viene de requireProjectAccess (la ruta valida acceso al proyecto del body).
     const { titulo, descripcion, estado, prioridad, asignadoAId, sprintId, fechaVencimiento } = req.body;
     const proyectoId = req.project.id;
 
-    // Posición al final de su columna.
     const max = await prisma.tarea.aggregate({
       where: { proyectoId, estado: estado || 'PENDIENTE' },
       _max: { orden: true },
@@ -148,7 +138,6 @@ const createTask = async (req, res) => {
       detalles: `creó la tarea «${task.titulo}»`,
     });
 
-    // Notificar al asignado (si no es uno mismo).
     if (task.asignadoAId) {
       await notificar({
         usuarioId: task.asignadoAId,
@@ -168,10 +157,9 @@ const createTask = async (req, res) => {
 const updateTask = async (req, res) => {
   try {
     const { userId, esAdmin } = req.user;
-    const prev = req.task; // estado anterior, cargado por el middleware
+    const prev = req.task;
     const data = req.body;
 
-    // Permiso para FINALIZAR: solo jefe de equipo, jefe de proyecto o supervisor.
     if (data.estado === 'FINALIZADO' && prev.estado !== 'FINALIZADO') {
       if (!(await puedeFinalizarTareas(userId, esAdmin, req.project))) {
         return res.status(403).json({
@@ -189,7 +177,6 @@ const updateTask = async (req, res) => {
       },
     });
 
-    // Historial
     if (data.estado === 'FINALIZADO') {
       await registrarActividad({
         usuarioId: userId, entidadTipo: 'TAREA', entidadId: task.id,
@@ -205,14 +192,12 @@ const updateTask = async (req, res) => {
       });
     }
 
-    // Notificación: reasignación de tarea
     if (data.asignadoAId !== undefined && data.asignadoAId && data.asignadoAId !== prev.asignadoAId) {
       await notificar({
         usuarioId: data.asignadoAId, actorId: userId, tipo: 'ASIGNACION_TAREA',
         mensaje: `Se te ha asignado la tarea «${task.titulo}» en ${task.proyecto.nombre}`,
       });
     }
-    // Notificación: cambio de estado al asignado (si lo cambió otra persona)
     if (data.estado && data.estado !== prev.estado && task.asignadoAId) {
       await notificar({
         usuarioId: task.asignadoAId, actorId: userId, tipo: 'CAMBIO_ESTADO',
@@ -227,8 +212,6 @@ const updateTask = async (req, res) => {
   }
 };
 
-// PUT /tasks/reorder  { columna: 'EN_PROGRESO', ids: [3,1,2] }
-// Persiste el orden tras un drag & drop dentro de una columna.
 const reorderTasks = async (req, res) => {
   try {
     const { ids } = req.body;
@@ -250,7 +233,6 @@ const deleteTask = async (req, res) => {
   try {
     const { userId, esAdmin } = req.user;
 
-    // Solo jefes/supervisores pueden eliminar tareas.
     if (!(await puedeFinalizarTareas(userId, esAdmin, req.project))) {
       return res.status(403).json({ error: 'Solo supervisores y jefes pueden eliminar tareas' });
     }
@@ -270,7 +252,6 @@ const deleteTask = async (req, res) => {
   }
 };
 
-// POST /tasks/:id/etiquetas  { etiquetaId }  → añade una etiqueta a la tarea
 const addEtiqueta = async (req, res) => {
   try {
     const etiquetaId = parseInt(req.body.etiquetaId);
@@ -293,7 +274,6 @@ const addEtiqueta = async (req, res) => {
   }
 };
 
-// DELETE /tasks/:id/etiquetas/:etiquetaId  → quita una etiqueta de la tarea
 const removeEtiqueta = async (req, res) => {
   try {
     const etiquetaId = parseInt(req.params.etiquetaId);
