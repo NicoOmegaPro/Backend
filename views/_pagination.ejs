@@ -1,7 +1,7 @@
 <% if (typeof pagination !== 'undefined' && pagination && pagination.pages > 1) {
      const cur = pagination.page;
      const last = pagination.pages;
-     const base = (typeof pagBase !== 'undefined' && pagBase) ? pagBase : ('/admin/' + active);
+     const base = (typeof pagBase !== 'undefined' && pagBase) ? pagBase : ('/admin/' + active + (typeof q !== 'undefined' && q ? '?q=' + encodeURIComponent(q) : ''));
      const sep = base.includes('?') ? '&' : '?';
      let start = Math.max(1, cur - 2);
      let end = Math.min(last, cur + 2);

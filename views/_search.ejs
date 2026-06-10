@@ -1,0 +1,7 @@
+<form class="srch" method="GET" action="/admin/<%= active %>">
+  <input type="text" name="q" placeholder="Buscar..." value="<%= typeof q !== 'undefined' && q ? q : '' %>">
+  <button class="btn btn-p" type="submit"><i class="bi bi-search"></i>Buscar</button>
+  <% if (typeof q !== 'undefined' && q) { %>
+    <a href="/admin/<%= active %>" class="btn btn-g">Limpiar</a>
+  <% } %>
+</form>

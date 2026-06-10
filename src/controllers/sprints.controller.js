@@ -17,7 +17,7 @@ const getAllSprints = async (req, res) => {
 
     const sprints = await prisma.sprint.findMany({
       where: { proyectoId: project.id },
-      orderBy: { fechaInicio: 'desc' },
+      orderBy: { id: 'asc' },
       include: { tareas: { select: { id: true, estado: true } } },
     });
     res.json(sprints);

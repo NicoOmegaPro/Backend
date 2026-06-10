@@ -89,7 +89,7 @@ const getTaskById = async (req, res) => {
           include: { autor: { select: { id: true, nombre: true, imagenPerfil: true } } },
         },
         adjuntos: {
-          orderBy: { fecha: 'desc' },
+          orderBy: { id: 'asc' },
           include: { usuario: { select: { id: true, nombre: true } } },
         },
         etiquetas: { include: { etiqueta: true } },

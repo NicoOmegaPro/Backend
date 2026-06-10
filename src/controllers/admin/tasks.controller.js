@@ -6,15 +6,25 @@ const isoDate = (date) => date ? new Date(date).toISOString().split('T')[0] : ''
 
 const index = async (req, res) => {
   const { page, limit, skip } = getPageParams(req);
+  const q = (req.query.q || '').trim();
+  const where = q ? {
+    OR: [
+      { titulo: { contains: q, mode: 'insensitive' } },
+      { descripcion: { contains: q, mode: 'insensitive' } },
+      { proyecto: { nombre: { contains: q, mode: 'insensitive' } } },
+      { asignadoA: { nombre: { contains: q, mode: 'insensitive' } } },
+    ],
+  } : {};
   const [tasks, total] = await Promise.all([
     prisma.tarea.findMany({
+      where,
       include: { proyecto: { select: { nombre: true } }, asignadoA: { select: { nombre: true } } },
       orderBy: { id: 'asc' },
       skip, take: limit,
     }),
-    prisma.tarea.count(),
+    prisma.tarea.count({ where }),
   ]);
-  res.render('tasks', { tasks, title: 'Tareas', active: 'tasks', fmt, pagination: buildMeta({ page, limit, total }) });
+  res.render('tasks', { tasks, q, title: 'Tareas', active: 'tasks', fmt, pagination: buildMeta({ page, limit, total }) });
 };
 
 const create = async (req, res) => {

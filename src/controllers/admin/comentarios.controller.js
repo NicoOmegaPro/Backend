@@ -5,15 +5,24 @@ const fmt = (date) => date ? new Date(date).toLocaleDateString('es-ES') : '-';
 
 const index = async (req, res) => {
   const { page, limit, skip } = getPageParams(req);
+  const q = (req.query.q || '').trim();
+  const where = q ? {
+    OR: [
+      { contenido: { contains: q, mode: 'insensitive' } },
+      { autor: { nombre: { contains: q, mode: 'insensitive' } } },
+      { tarea: { titulo: { contains: q, mode: 'insensitive' } } },
+    ],
+  } : {};
   const [comentarios, total] = await Promise.all([
     prisma.comentario.findMany({
+      where,
       include: { autor: { select: { nombre: true } }, tarea: { select: { titulo: true } } },
-      orderBy: { fecha: 'desc' },
+      orderBy: { id: 'asc' },
       skip, take: limit,
     }),
-    prisma.comentario.count(),
+    prisma.comentario.count({ where }),
   ]);
-  res.render('comentarios', { comentarios, title: 'Comentarios', active: 'comentarios', fmt, pagination: buildMeta({ page, limit, total }) });
+  res.render('comentarios', { comentarios, q, title: 'Comentarios', active: 'comentarios', fmt, pagination: buildMeta({ page, limit, total }) });
 };
 
 async function opciones() {

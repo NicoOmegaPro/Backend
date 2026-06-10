@@ -5,15 +5,24 @@ const fmt = (date) => date ? new Date(date).toLocaleDateString('es-ES') : '-';
 
 const index = async (req, res) => {
   const { page, limit, skip } = getPageParams(req);
+  const q = (req.query.q || '').trim();
+  const where = q ? {
+    OR: [
+      { mensaje: { contains: q, mode: 'insensitive' } },
+      { tipo: { contains: q, mode: 'insensitive' } },
+      { usuario: { nombre: { contains: q, mode: 'insensitive' } } },
+    ],
+  } : {};
   const [notificaciones, total] = await Promise.all([
     prisma.notificacion.findMany({
+      where,
       include: { usuario: { select: { nombre: true } } },
-      orderBy: { fecha: 'desc' },
+      orderBy: { id: 'asc' },
       skip, take: limit,
     }),
-    prisma.notificacion.count(),
+    prisma.notificacion.count({ where }),
   ]);
-  res.render('notificaciones', { notificaciones, title: 'Notificaciones', active: 'notificaciones', fmt, pagination: buildMeta({ page, limit, total }) });
+  res.render('notificaciones', { notificaciones, q, title: 'Notificaciones', active: 'notificaciones', fmt, pagination: buildMeta({ page, limit, total }) });
 };
 
 async function usuarios() {

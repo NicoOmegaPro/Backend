@@ -3,8 +3,18 @@ const { getPageParams, buildMeta } = require('../../utils/paginate');
 
 const index = async (req, res) => {
   const { page, limit, skip } = getPageParams(req);
+  const q = (req.query.q || '').trim();
+  const where = q ? {
+    OR: [
+      { nombre: { contains: q, mode: 'insensitive' } },
+      { descripcion: { contains: q, mode: 'insensitive' } },
+      { equipo: { nombre: { contains: q, mode: 'insensitive' } } },
+      { lider: { nombre: { contains: q, mode: 'insensitive' } } },
+    ],
+  } : {};
   const [projects, total] = await Promise.all([
     prisma.proyecto.findMany({
+      where,
       include: {
         equipo: { select: { nombre: true } },
         lider: { select: { nombre: true } },
@@ -13,9 +23,9 @@ const index = async (req, res) => {
       orderBy: { id: 'asc' },
       skip, take: limit,
     }),
-    prisma.proyecto.count(),
+    prisma.proyecto.count({ where }),
   ]);
-  res.render('projects', { projects, title: 'Proyectos', active: 'projects', pagination: buildMeta({ page, limit, total }) });
+  res.render('projects', { projects, q, title: 'Proyectos', active: 'projects', pagination: buildMeta({ page, limit, total }) });
 };
 
 const create = async (req, res) => {

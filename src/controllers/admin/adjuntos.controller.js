@@ -5,15 +5,24 @@ const fmt = (date) => date ? new Date(date).toLocaleDateString('es-ES') : '-';
 
 const index = async (req, res) => {
   const { page, limit, skip } = getPageParams(req);
+  const q = (req.query.q || '').trim();
+  const where = q ? {
+    OR: [
+      { nombre: { contains: q, mode: 'insensitive' } },
+      { usuario: { nombre: { contains: q, mode: 'insensitive' } } },
+      { tarea: { titulo: { contains: q, mode: 'insensitive' } } },
+    ],
+  } : {};
   const [adjuntos, total] = await Promise.all([
     prisma.adjunto.findMany({
+      where,
       include: { tarea: { select: { titulo: true } }, usuario: { select: { nombre: true } } },
-      orderBy: { fecha: 'desc' },
+      orderBy: { id: 'asc' },
       skip, take: limit,
     }),
-    prisma.adjunto.count(),
+    prisma.adjunto.count({ where }),
   ]);
-  res.render('adjuntos', { adjuntos, title: 'Adjuntos', active: 'adjuntos', fmt, pagination: buildMeta({ page, limit, total }) });
+  res.render('adjuntos', { adjuntos, q, title: 'Adjuntos', active: 'adjuntos', fmt, pagination: buildMeta({ page, limit, total }) });
 };
 
 async function opciones() {

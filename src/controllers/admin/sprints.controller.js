@@ -6,11 +6,19 @@ const isoDate = (date) => date ? new Date(date).toISOString().split('T')[0] : ''
 
 const index = async (req, res) => {
   const { page, limit, skip } = getPageParams(req);
+  const q = (req.query.q || '').trim();
+  const where = q ? {
+    OR: [
+      { nombre: { contains: q, mode: 'insensitive' } },
+      { objetivo: { contains: q, mode: 'insensitive' } },
+      { proyecto: { nombre: { contains: q, mode: 'insensitive' } } },
+    ],
+  } : {};
   const [sprints, total] = await Promise.all([
-    prisma.sprint.findMany({ include: { proyecto: { select: { nombre: true } } }, orderBy: { id: 'asc' }, skip, take: limit }),
-    prisma.sprint.count(),
+    prisma.sprint.findMany({ where, include: { proyecto: { select: { nombre: true } } }, orderBy: { id: 'asc' }, skip, take: limit }),
+    prisma.sprint.count({ where }),
   ]);
-  res.render('sprints', { sprints, title: 'Sprints', active: 'sprints', fmt, pagination: buildMeta({ page, limit, total }) });
+  res.render('sprints', { sprints, q, title: 'Sprints', active: 'sprints', fmt, pagination: buildMeta({ page, limit, total }) });
 };
 
 const create = async (req, res) => {

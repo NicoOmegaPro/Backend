@@ -3,11 +3,17 @@ const { getPageParams, buildMeta } = require('../../utils/paginate');
 
 const index = async (req, res) => {
   const { page, limit, skip } = getPageParams(req);
+  const q = (req.query.q || '').trim();
+  const where = q ? {
+    OR: [
+      { nombre: { contains: q, mode: 'insensitive' } },
+    ],
+  } : {};
   const [etiquetas, total] = await Promise.all([
-    prisma.etiqueta.findMany({ include: { _count: { select: { tareas: true } } }, orderBy: { id: 'asc' }, skip, take: limit }),
-    prisma.etiqueta.count(),
+    prisma.etiqueta.findMany({ where, include: { _count: { select: { tareas: true } } }, orderBy: { id: 'asc' }, skip, take: limit }),
+    prisma.etiqueta.count({ where }),
   ]);
-  res.render('etiquetas', { etiquetas, title: 'Etiquetas', active: 'etiquetas', pagination: buildMeta({ page, limit, total }) });
+  res.render('etiquetas', { etiquetas, q, title: 'Etiquetas', active: 'etiquetas', pagination: buildMeta({ page, limit, total }) });
 };
 
 const create = (req, res) => {

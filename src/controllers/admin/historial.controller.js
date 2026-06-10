@@ -5,15 +5,25 @@ const fmt = (date) => date ? new Date(date).toLocaleDateString('es-ES') : '-';
 
 const index = async (req, res) => {
   const { page, limit, skip } = getPageParams(req, { defaultLimit: 30 });
+  const q = (req.query.q || '').trim();
+  const where = q ? {
+    OR: [
+      { accion: { contains: q, mode: 'insensitive' } },
+      { detalles: { contains: q, mode: 'insensitive' } },
+      { entidadTipo: { contains: q, mode: 'insensitive' } },
+      { usuario: { nombre: { contains: q, mode: 'insensitive' } } },
+    ],
+  } : {};
   const [historial, total] = await Promise.all([
     prisma.historialActividad.findMany({
+      where,
       include: { usuario: { select: { nombre: true } } },
-      orderBy: { fecha: 'desc' },
+      orderBy: { id: 'asc' },
       skip, take: limit,
     }),
-    prisma.historialActividad.count(),
+    prisma.historialActividad.count({ where }),
   ]);
-  res.render('historial', { historial, title: 'Historial', active: 'historial', fmt, pagination: buildMeta({ page, limit, total }) });
+  res.render('historial', { historial, q, title: 'Historial', active: 'historial', fmt, pagination: buildMeta({ page, limit, total }) });
 };
 
 async function usuarios() {

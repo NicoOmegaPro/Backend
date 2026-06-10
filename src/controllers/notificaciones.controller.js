@@ -12,7 +12,7 @@ const getAllNotificaciones = async (req, res) => {
     const [items, total, noLeidas] = await Promise.all([
       prisma.notificacion.findMany({
         where,
-        orderBy: { fecha: 'desc' },
+        orderBy: { id: 'asc' },
         skip: (page - 1) * limit,
         take: limit,
       }),

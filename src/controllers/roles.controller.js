@@ -2,7 +2,7 @@ const prisma = require('../prisma');
 
 const getAllRoles = async (req, res) => {
   try {
-    const roles = await prisma.rol.findMany();
+    const roles = await prisma.rol.findMany({ orderBy: { id: 'asc' } });
     res.json(roles);
   } catch (error) {
     console.error(error);

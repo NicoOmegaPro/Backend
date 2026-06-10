@@ -30,7 +30,7 @@ const getAllHistorial = async (req, res) => {
       prisma.historialActividad.findMany({
         where,
         include: { usuario: { select: { id: true, nombre: true, email: true, imagenPerfil: true } } },
-        orderBy: { fecha: 'desc' },
+        orderBy: { id: 'asc' },
         skip: (page - 1) * limit,
         take: limit,
       }),

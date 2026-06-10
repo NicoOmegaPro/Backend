@@ -6,11 +6,18 @@ const ESTADOS = ['ACEPTADO', 'PENDIENTE', 'RECHAZADO'];
 
 const index = async (req, res) => {
   const { page, limit, skip } = getPageParams(req);
+  const q = (req.query.q || '').trim();
+  const where = q ? {
+    OR: [
+      { nombre: { contains: q, mode: 'insensitive' } },
+      { descripcion: { contains: q, mode: 'insensitive' } },
+    ],
+  } : {};
   const [equipos, total] = await Promise.all([
-    prisma.equipo.findMany({ include: { _count: { select: { usuarios: true, proyectos: true } } }, orderBy: { id: 'asc' }, skip, take: limit }),
-    prisma.equipo.count(),
+    prisma.equipo.findMany({ where, include: { _count: { select: { usuarios: true, proyectos: true } } }, orderBy: { id: 'asc' }, skip, take: limit }),
+    prisma.equipo.count({ where }),
   ]);
-  res.render('equipos', { equipos, title: 'Equipos', active: 'equipos', pagination: buildMeta({ page, limit, total }) });
+  res.render('equipos', { equipos, q, title: 'Equipos', active: 'equipos', pagination: buildMeta({ page, limit, total }) });
 };
 
 const create = async (req, res) => {

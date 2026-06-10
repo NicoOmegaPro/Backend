@@ -120,6 +120,18 @@
     .ph { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
     .ph-t { font-size: 16px; font-weight: 700; letter-spacing: -0.01em; }
 
+    /* ─── SEARCH ─── */
+    .srch { display: flex; gap: 8px; margin-bottom: 14px; }
+    .srch input {
+      width: 280px; padding: 8px 12px; font-size: 13px;
+      border: 1px solid var(--border); border-radius: 9px;
+      background: var(--bg-secondary); color: var(--text); outline: none;
+      font-family: inherit;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .srch input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(110,118,241,.2); }
+    .srch input::placeholder { color: var(--faint); }
+
     /* ─── BUTTONS ─── */
     .btn {
       display: inline-flex; align-items: center; gap: 6px;

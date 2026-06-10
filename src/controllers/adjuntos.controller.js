@@ -10,7 +10,7 @@ const getAllAdjuntos = async (req, res) => {
 
     const adjuntos = await prisma.adjunto.findMany({
       where: { tareaId: parseInt(tareaId) },
-      orderBy: { fecha: 'desc' },
+      orderBy: { id: 'asc' },
       include: { usuario: { select: { id: true, nombre: true } } },
     });
     res.json(adjuntos);

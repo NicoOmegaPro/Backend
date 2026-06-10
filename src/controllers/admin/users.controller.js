@@ -6,11 +6,19 @@ const toBool = (v) => ['on', 'true', '1', true].includes(v);
 
 const index = async (req, res) => {
   const { page, limit, skip } = getPageParams(req);
+  const q = (req.query.q || '').trim();
+  const where = q ? {
+    OR: [
+      { nombre: { contains: q, mode: 'insensitive' } },
+      { email: { contains: q, mode: 'insensitive' } },
+      { descripcion: { contains: q, mode: 'insensitive' } },
+    ],
+  } : {};
   const [users, total] = await Promise.all([
-    prisma.usuario.findMany({ orderBy: { id: 'asc' }, skip, take: limit }),
-    prisma.usuario.count(),
+    prisma.usuario.findMany({ where, orderBy: { id: 'asc' }, skip, take: limit }),
+    prisma.usuario.count({ where }),
   ]);
-  res.render('users', { users, title: 'Usuarios', active: 'users', pagination: buildMeta({ page, limit, total }) });
+  res.render('users', { users, q, title: 'Usuarios', active: 'users', pagination: buildMeta({ page, limit, total }) });
 };
 
 const create = async (req, res) => {

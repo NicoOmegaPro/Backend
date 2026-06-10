@@ -39,7 +39,7 @@ const getAllEquipos = async (req, res) => {
       return res.json({ items: equipos.map(withRol), ...buildMeta({ page, limit, total }) });
     }
 
-    const equipos = await prisma.equipo.findMany({ where, include });
+    const equipos = await prisma.equipo.findMany({ where, include, orderBy: { id: 'asc' } });
     res.json(equipos.map(withRol));
   } catch (error) {
     console.error(error);

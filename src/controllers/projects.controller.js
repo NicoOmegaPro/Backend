@@ -51,7 +51,7 @@ const getProjectById = async (req, res) => {
           include: { asignadoA: { select: { id: true, nombre: true, imagenPerfil: true } } },
           orderBy: [{ orden: 'asc' }, { id: 'asc' }],
         },
-        sprints: { orderBy: { fechaInicio: 'desc' } },
+        sprints: { orderBy: { id: 'asc' } },
       },
     });
     if (!project) return res.status(404).json({ error: 'Proyecto no encontrado' });
