@@ -3,15 +3,9 @@ const prisma = require('../prisma');
 async function getAccessibleProjectIds(userId, esAdmin) {
   if (esAdmin) return null;
 
-  const memberships = await prisma.equipoUsuario.findMany({
-    where: { usuarioId: userId, estado: 'ACEPTADO' },
-    select: { equipoId: true },
-  });
-  const teamIds = memberships.map((m) => m.equipoId);
-  if (!teamIds.length) return [];
-
+  // Proyectos donde el usuario pertenece a alguno de sus equipos (dueño o invitado).
   const proyectos = await prisma.proyecto.findMany({
-    where: { equipoId: { in: teamIds } },
+    where: { equipos: { some: { equipo: { usuarios: { some: { usuarioId: userId, estado: 'ACEPTADO' } } } } } },
     select: { id: true },
   });
   return proyectos.map((p) => p.id);

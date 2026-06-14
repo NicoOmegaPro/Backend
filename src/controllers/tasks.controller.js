@@ -9,6 +9,7 @@ const ESTADO_LABEL = {
   FINALIZADO: 'Finalizado',
 };
 
+// Solo el equipo dueño gestiona: finalizan/borran tareas su jefe y supervisores.
 async function puedeFinalizarTareas(userId, esAdmin, proyecto) {
   if (esAdmin) return true;
   if (!proyecto?.equipoId) return false;
@@ -26,17 +27,10 @@ const getAllTasks = async (req, res) => {
     const and = [];
 
     if (!esAdmin) {
-      const memberships = await prisma.equipoUsuario.findMany({
-        where: { usuarioId: userId, estado: 'ACEPTADO' },
-        select: { equipoId: true },
-      });
-      const teamIds = memberships.map((m) => m.equipoId);
+      // Solo tareas de proyectos donde el usuario pertenece a alguno de sus equipos.
       and.push({
         proyecto: {
-          OR: [
-            { equipoId: { in: teamIds } },
-            { miembros: { some: { usuarioId: userId } } },
-          ],
+          equipos: { some: { equipo: { usuarios: { some: { usuarioId: userId, estado: 'ACEPTADO' } } } } },
         },
       });
     }

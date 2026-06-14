@@ -16,7 +16,8 @@ async function createRandomProjects(prisma, equipos, users, count) {
         descripcion: faker.lorem.sentences(2),
         estado: faker.helpers.arrayElement(['ACTIVO', 'ACTIVO', 'COMPLETADO', 'ARCHIVADO']),
         liderId: lider ? lider.id : null,
-        equipoId: equipo.id
+        equipoId: equipo.id,
+        equipos: { create: { equipoId: equipo.id } } // el equipo dueño también es equipo del proyecto
       }
     });
 

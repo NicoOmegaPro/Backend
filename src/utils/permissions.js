@@ -29,13 +29,33 @@ async function esMiembroDeEquipo(userId, equipoId) {
   return mem?.estado === 'ACEPTADO';
 }
 
+// El usuario pertenece al proyecto si es miembro ACEPTADO de cualquiera de sus
+// equipos (el dueño o cualquier equipo invitado).
+async function esMiembroDeProyecto(userId, projectId) {
+  if (!projectId) return false;
+  const count = await prisma.proyectoEquipo.count({
+    where: {
+      proyectoId: projectId,
+      equipo: { usuarios: { some: { usuarioId: userId, estado: 'ACEPTADO' } } },
+    },
+  });
+  return count > 0;
+}
+
+// Rol del usuario dentro del proyecto. Solo el equipo dueño gestiona: sus miembros
+// conservan su rol de equipo; los miembros de equipos invitados son TRABAJADORES (MIEMBRO).
 async function rolEnProyecto(userId, esAdmin, project) {
-  return rolEnEquipo(userId, esAdmin, project?.equipoId);
+  if (esAdmin) return 'JEFE_EQUIPO';
+  if (!project) return null;
+  const rolDueno = await rolEnEquipo(userId, false, project.equipoId);
+  if (rolDueno) return rolDueno;
+  if (await esMiembroDeProyecto(userId, project.id)) return 'MIEMBRO';
+  return null;
 }
 
 async function canAccessProject(userId, esAdmin, project) {
   if (esAdmin) return true;
-  return esMiembroDeEquipo(userId, project.equipoId);
+  return esMiembroDeProyecto(userId, project.id);
 }
 
 
@@ -140,6 +160,7 @@ module.exports = {
   rolEnEquipo,
   esJefeDeEquipo,
   esMiembroDeEquipo,
+  esMiembroDeProyecto,
   rolEnProyecto,
   canAccessProject,
   requireProjectAccess,

@@ -39,12 +39,14 @@ const create = async (req, res) => {
 const store = async (req, res) => {
   try {
     const { nombre, descripcion, estado, equipoId, liderId } = req.body;
+    const ownerId = equipoId ? parseInt(equipoId) : null;
     await prisma.proyecto.create({
       data: {
         nombre, descripcion,
         estado: estado || 'ACTIVO',
-        equipoId: equipoId ? parseInt(equipoId) : null,
-        liderId: liderId ? parseInt(liderId) : null
+        equipoId: ownerId,
+        liderId: liderId ? parseInt(liderId) : null,
+        ...(ownerId ? { equipos: { create: { equipoId: ownerId } } } : {})
       }
     });
   } catch (err) { console.error(err); }
@@ -62,15 +64,25 @@ const edit = async (req, res) => {
 
 const update = async (req, res) => {
   try {
+    const projectId = parseInt(req.params.id);
     const { nombre, descripcion, estado, equipoId, liderId } = req.body;
+    const ownerId = equipoId ? parseInt(equipoId) : null;
     await prisma.proyecto.update({
-      where: { id: parseInt(req.params.id) },
+      where: { id: projectId },
       data: {
         nombre, descripcion, estado,
-        equipoId: equipoId ? parseInt(equipoId) : null,
+        equipoId: ownerId,
         liderId: liderId ? parseInt(liderId) : null
       }
     });
+    // Asegura que el equipo dueño figure como equipo del proyecto.
+    if (ownerId) {
+      await prisma.proyectoEquipo.upsert({
+        where: { proyectoId_equipoId: { proyectoId: projectId, equipoId: ownerId } },
+        update: {},
+        create: { proyectoId: projectId, equipoId: ownerId },
+      });
+    }
   } catch (err) { console.error(err); }
   res.redirect('/admin/projects');
 };

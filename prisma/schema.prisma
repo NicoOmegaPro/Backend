@@ -25,12 +25,13 @@ model Usuario {
 }
 
 model Equipo {
-  id          Int             @id @default(autoincrement())
-  nombre      String
-  descripcion String?
-  imagen      String?         // Ruta local de la imagen/avatar del equipo
-  usuarios    EquipoUsuario[]
-  proyectos   Proyecto[]
+  id              Int              @id @default(autoincrement())
+  nombre          String
+  descripcion     String?
+  imagen          String?          // Ruta local de la imagen/avatar del equipo
+  usuarios        EquipoUsuario[]
+  proyectos       Proyecto[]       // Proyectos de los que este equipo es el dueño/creador
+  proyectosVinculados ProyectoEquipo[] // Proyectos en los que colabora (incluye los propios)
 }
 
 model EquipoUsuario {
@@ -49,14 +50,24 @@ model Proyecto {
   nombre      String
   descripcion String?
   estado      String    @default("ACTIVO") // ACTIVO, COMPLETADO, ARCHIVADO
-  equipoId    Int?
+  equipoId    Int?      // Equipo dueño/creador: su jefe gestiona el proyecto
   equipo      Equipo?   @relation(fields: [equipoId], references: [id])
+  equipos     ProyectoEquipo[] // Todos los equipos del proyecto (dueño + invitados)
   liderId     Int?
   lider       Usuario?  @relation("LiderProyecto", fields: [liderId], references: [id])
   tareas      Tarea[]
   sprints     Sprint[]
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @default(now()) @updatedAt
+}
+
+model ProyectoEquipo {
+  proyectoId Int
+  equipoId   Int
+  proyecto   Proyecto @relation(fields: [proyectoId], references: [id], onDelete: Cascade)
+  equipo     Equipo   @relation(fields: [equipoId], references: [id], onDelete: Cascade)
+
+  @@id([proyectoId, equipoId])
 }
 
 model Sprint {
