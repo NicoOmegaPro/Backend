@@ -1,6 +1,19 @@
 const prisma = require('../../prisma');
 const { getPageParams, buildMeta } = require('../../utils/paginate');
 
+// Normaliza el valor de los checkboxes (puede llegar como array, string o undefined).
+function normalizarIds(v) {
+  const arr = Array.isArray(v) ? v : v ? [v] : [];
+  return arr.map((x) => parseInt(x)).filter((n) => !Number.isNaN(n));
+}
+
+// Equipos del proyecto = el dueño + los colaboradores marcados (sin duplicados).
+function equiposDelFormulario(body) {
+  const ownerId = body.equipoId ? parseInt(body.equipoId) : null;
+  const colaboradores = normalizarIds(body.equiposColaboradores);
+  return [...new Set([...(ownerId ? [ownerId] : []), ...colaboradores])];
+}
+
 const index = async (req, res) => {
   const { page, limit, skip } = getPageParams(req);
   const q = (req.query.q || '').trim();
@@ -33,20 +46,21 @@ const create = async (req, res) => {
     prisma.equipo.findMany({ select: { id: true, nombre: true } }),
     prisma.usuario.findMany({ select: { id: true, nombre: true } })
   ]);
-  res.render('projects_form', { project: null, equipos, users, title: 'Nuevo Proyecto', active: 'projects' });
+  res.render('projects_form', { project: null, equipos, users, vinculados: [], title: 'Nuevo Proyecto', active: 'projects' });
 };
 
 const store = async (req, res) => {
   try {
     const { nombre, descripcion, estado, equipoId, liderId } = req.body;
     const ownerId = equipoId ? parseInt(equipoId) : null;
+    const equiposIds = equiposDelFormulario(req.body);
     await prisma.proyecto.create({
       data: {
         nombre, descripcion,
         estado: estado || 'ACTIVO',
         equipoId: ownerId,
         liderId: liderId ? parseInt(liderId) : null,
-        ...(ownerId ? { equipos: { create: { equipoId: ownerId } } } : {})
+        equipos: { create: equiposIds.map((id) => ({ equipoId: id })) }
       }
     });
   } catch (err) { console.error(err); }
@@ -55,11 +69,15 @@ const store = async (req, res) => {
 
 const edit = async (req, res) => {
   const [project, equipos, users] = await Promise.all([
-    prisma.proyecto.findUnique({ where: { id: parseInt(req.params.id) } }),
+    prisma.proyecto.findUnique({
+      where: { id: parseInt(req.params.id) },
+      include: { equipos: { select: { equipoId: true } } },
+    }),
     prisma.equipo.findMany({ select: { id: true, nombre: true } }),
     prisma.usuario.findMany({ select: { id: true, nombre: true } })
   ]);
-  res.render('projects_form', { project, equipos, users, title: 'Editar Proyecto', active: 'projects' });
+  const vinculados = project ? project.equipos.map((e) => e.equipoId) : [];
+  res.render('projects_form', { project, equipos, users, vinculados, title: 'Editar Proyecto', active: 'projects' });
 };
 
 const update = async (req, res) => {
@@ -67,6 +85,7 @@ const update = async (req, res) => {
     const projectId = parseInt(req.params.id);
     const { nombre, descripcion, estado, equipoId, liderId } = req.body;
     const ownerId = equipoId ? parseInt(equipoId) : null;
+    const equiposIds = equiposDelFormulario(req.body);
     await prisma.proyecto.update({
       where: { id: projectId },
       data: {
@@ -75,12 +94,12 @@ const update = async (req, res) => {
         liderId: liderId ? parseInt(liderId) : null
       }
     });
-    // Asegura que el equipo dueño figure como equipo del proyecto.
-    if (ownerId) {
-      await prisma.proyectoEquipo.upsert({
-        where: { proyectoId_equipoId: { proyectoId: projectId, equipoId: ownerId } },
-        update: {},
-        create: { proyectoId: projectId, equipoId: ownerId },
+    // Sincroniza los equipos del proyecto con lo marcado en el formulario.
+    await prisma.proyectoEquipo.deleteMany({ where: { proyectoId: projectId } });
+    if (equiposIds.length) {
+      await prisma.proyectoEquipo.createMany({
+        data: equiposIds.map((id) => ({ proyectoId: projectId, equipoId: id })),
+        skipDuplicates: true,
       });
     }
   } catch (err) { console.error(err); }

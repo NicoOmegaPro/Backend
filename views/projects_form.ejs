@@ -22,13 +22,25 @@
       </select>
     </div>
     <div class="f">
-      <label>Equipo</label>
+      <label>Equipo dueño</label>
       <select name="equipoId">
         <option value="">-- Sin equipo --</option>
         <% equipos.forEach(e => { %>
         <option value="<%= e.id %>" <%= project && project.equipoId === e.id ? 'selected' : '' %>><%= e.nombre %></option>
         <% }) %>
       </select>
+    </div>
+    <div class="f">
+      <label>Otros equipos del proyecto</label>
+      <div style="display:flex;flex-wrap:wrap;gap:8px 16px;padding:8px 0;">
+        <% equipos.forEach(e => { %>
+        <label style="display:flex;align-items:center;gap:6px;font-weight:400;">
+          <input type="checkbox" name="equiposColaboradores" value="<%= e.id %>" <%= vinculados.includes(e.id) ? 'checked' : '' %>>
+          <%= e.nombre %>
+        </label>
+        <% }) %>
+      </div>
+      <small style="opacity:.7;">El equipo dueño se añade automáticamente. Marca aquí los equipos colaboradores.</small>
     </div>
     <div class="f">
       <label>Líder</label>
