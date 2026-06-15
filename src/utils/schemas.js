@@ -9,7 +9,8 @@ const fechaOpcional = z
   .union([z.string(), z.date(), z.null()])
   .optional()
   .transform((v) => {
-    if (v === null || v === undefined || v === '') return null;
+    if (v === undefined) return undefined;      // no se envió → no tocar el campo
+    if (v === null || v === '') return null;    // se envió vacío → limpiar el campo
     const d = new Date(v);
     return Number.isNaN(d.getTime()) ? null : d;
   });
@@ -18,7 +19,8 @@ const idOpcional = z
   .union([z.number(), z.string(), z.null()])
   .optional()
   .transform((v) => {
-    if (v === null || v === undefined || v === '') return null;
+    if (v === undefined) return undefined;      // no se envió → no tocar el campo
+    if (v === null || v === '') return null;    // se envió vacío → limpiar el campo
     const n = parseInt(v);
     return Number.isNaN(n) ? null : n;
   });
